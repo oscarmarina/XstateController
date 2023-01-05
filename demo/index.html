@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Demo - xstate-counter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <meta name="description" content="xstate-counter" />
+    <style>
+      html,
+      body {
+        height: 100%;
+        font-family: sans-serif;
+      }
+
+      body {
+        margin: 3rem 0 0;
+        color: rgb(32, 32, 32);
+      }
+
+      h1 {
+        font-size: 1.5rem;
+        font-weight: 400;
+        text-align: center;
+        margin: 0 0 2rem;
+      }
+
+      a {
+        color: rgb(0, 106, 220);
+        text-decoration: none;
+        border-bottom: 1px dashed rgb(197, 197, 197);
+      }
+
+      a:hover {
+        border-bottom-color: rgb(32, 32, 32);
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      import { html, render } from 'lit';
+      import '../define/xstate-counter.js';
+
+      render(
+        html` <xstate-counter @counterchange="${ev => console.log('==>', ev.detail)}">
+          <h1>
+            State machine with
+            <a target="_blank" rel="noopener noreferrer" href="https://xstate.js.org/docs/"
+              >xstate</a
+            >
+            and
+            <a
+              href="https://lit.dev/docs/composition/controllers/"
+              target="_blank"
+              rel="noopener noreferrer"
+              >Lit Controller</a
+            >
+          </h1>
+        </xstate-counter>`,
+        document.querySelector('body'),
+      );
+    </script>
+  </body>
+</html>
