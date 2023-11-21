@@ -4,8 +4,6 @@ import { counterMachine } from './counterMachine.js';
 import { styles } from './styles/xstate-counter-styles.css.js';
 
 export class XstateCounter extends LitElement {
-  static is = 'xstate-counter';
-
   static properties = {
     _xstate: {
       type: Object,
@@ -17,23 +15,24 @@ export class XstateCounter extends LitElement {
 
   constructor() {
     super();
+    this._xstate = {};
     this.counterController = new XstateController(this, counterMachine, '_xstate');
   }
 
   updated(props) {
     super.updated && super.updated(props);
     if (props.has('_xstate')) {
-      const { context, event } = this._xstate;
+      const { context, value } = this._xstate;
       const counterEvent = new CustomEvent('counterchange', {
         bubbles: true,
-        detail: { ...context, ...event },
+        detail: { ...context, value },
       });
       this.dispatchEvent(counterEvent);
     }
   }
 
   get #disabled() {
-    return this.counterController.state.value === 'disabled';
+    return this.counterController.state.matches('disabled');
   }
 
   render() {
@@ -44,14 +43,14 @@ export class XstateCounter extends LitElement {
           <button
             ?disabled="${this.#disabled}"
             data-counter="increment"
-            @click=${() => this.counterController.send('INC')}
+            @click=${() => this.counterController.send({ type: 'INC' })}
           >
             Increment
           </button>
           <button
             ?disabled="${this.#disabled}"
             data-counter="decrement"
-            @click=${() => this.counterController.send('DEC')}
+            @click=${() => this.counterController.send({ type: 'DEC' })}
           >
             Decrement
           </button>
@@ -59,7 +58,7 @@ export class XstateCounter extends LitElement {
         <p>${this.counterController.state.context.counter}</p>
       </div>
       <div>
-        <button @click=${() => this.counterController.send('TOGGLE')}>
+        <button @click=${() => this.counterController.send({ type: 'TOGGLE' })}>
           ${this.#disabled ? 'Enabled counter' : 'Disabled counter'}
         </button>
       </div>

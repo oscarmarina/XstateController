@@ -1,20 +1,31 @@
 {
   "name": "@blockquote/xstate-counter",
   "version": "1.0.0-rc.1",
-  "description": "Webcomponent xstate-counter following open-wc recommendations",
+  "description": "This controller allows you to subscribe to an XState actor, updating a specified reactive property whenever the state machine transitions.",
   "keywords": [
     "lit",
     "web-component",
-    "lit-element"
+    "XState",
+    "stately",
+    "state-machine",
+    "statechart",
+    "actor"
   ],
+  "homepage": "https://github.com/oscarmarina/XstateController",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oscarmarina/XstateController.git"
+  },
   "license": "MIT",
-  "author": "xstate-counter",
+  "author": "Oscar Marina",
   "type": "module",
   "exports": {
     ".": {
       "default": "./index.js"
     },
-    "./package.json": "./package.json",
+    "./package.json": {
+      "default": "./package.json"
+    },
     "./src/XstateController.js": {
       "default": "./src/XstateController.js"
     },
@@ -142,7 +153,7 @@
   },
   "dependencies": {
     "lit": "^3.1.0",
-    "xstate": "^4.38.3"
+    "xstate": "^5.0.0-beta.45"
   },
   "devDependencies": {
     "@blockquote-web-components/blockquote-base-style-helpers": "^1.0.21",
