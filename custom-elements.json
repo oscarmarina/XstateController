@@ -8,7 +8,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "# XstateController\n\n![Lit](https://img.shields.io/badge/lit-3.0.0-blue.svg)\n\nPlayground:\n- [xstate.js.org](https://xstate.js.org/docs/)\n- [xstate.js.org - examples](https://xstate.js.org/docs/examples/counter.html)\n- [Original idea](https://codesandbox.io/s/z3o0s?file=/src/toggleMachine.ts)\n- [Original idea](https://www.thisdot.co/blog/state-machines-using-xstate-and-svelte-part-1)\n- [xstate.web.js](https://github.com/statelyai/xstate/issues/787#issuecomment-551940687)\n\n- [xstate-lit](https://github.com/InsightSoftwareConsortium/xstate-lit/tree/main)\n\n## Demo\n\n[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/oscarmarina/XstateController)\n\n## Installation\n\n```bash\nnpm i && npm start\n```\n\n- [Web Component with Lit - Scaffolding](https://github.com/oscarmarina/create-wc)\n<hr>",
+          "description": "# XstateController\n\n![Lit](https://img.shields.io/badge/lit-3.0.0-blue.svg)\n\n`XstateReactiveController` is a Lit Reactive Controller designed for seamless integration with XState.\n\nThis controller allows you to subscribe to an XState actor, updating a specified reactive property whenever the state machine transitions.\nIt simplifies the integration of XState's powerful state management into Lit components.\n\n- [xstate v5](https://stately.ai/docs/installation)\n- [xstate v5 - examples](https://stately.ai/docs/examples)\n- [Original idea](https://codesandbox.io/s/z3o0s?file=/src/toggleMachine.ts)\n\n## Demo\n\n[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/oscarmarina/XstateController)\n\n## Usage\n\n***counterMachine.js***\n\n```javascript\nimport { createMachine, assign } from 'xstate';\n\nconst states = {\n  enabled: 'enabled',\n  disabled: 'disabled',\n};\n\nconst increment = {\n  counter: ({ context }) => context.counter + 1,\n  event: ({ event }) => event,\n};\nconst decrement = {\n  counter: ({ context }) => context.counter - 1,\n  event: ({ event }) => event,\n};\n\nconst isNotMax = ({ context }) => context.counter < 10;\nconst isNotMin = ({ context }) => context.counter > 0;\n\nexport const counterMachine = createMachine({\n  id: 'counter',\n  context: { counter: 0, event: undefined },\n  initial: 'enabled',\n  states: {\n    enabled: {\n      on: {\n        INC: {\n          actions: assign(increment),\n          guard: isNotMax,\n        },\n        DEC: {\n          actions: assign(decrement),\n          guard: isNotMin,\n        },\n        TOGGLE: {\n          target: states.disabled,\n        },\n      },\n    },\n    disabled: {\n      on: {\n        TOGGLE: {\n          target: states.enabled,\n        },\n      },\n    },\n  },\n});\n\n```\n\n***XstateCounter.js***\n\n```javascript\nimport { html, LitElement } from 'lit';\nimport { XstateController } from './XstateController.js';\nimport { counterMachine } from './counterMachine.js';\n\nexport class XstateCounter extends LitElement {\n  static properties = {\n    _xstate: {\n      type: Object,\n      state: true,\n    },\n  };\n\n  constructor() {\n    super();\n    this._xstate = {};\n    this.counterController = new XstateController(this, counterMachine, '_xstate');\n  }\n\n  updated(props) {\n    super.updated && super.updated(props);\n    if (props.has('_xstate')) {\n      const { context, value } = this._xstate;\n      const counterEvent = new CustomEvent('counterchange', {\n        bubbles: true,\n        detail: { ...context, value },\n      });\n      this.dispatchEvent(counterEvent);\n    }\n  }\n\n  // ...\n\n  get #disabled() {\n    return this.counterController.state.matches('disabled');\n  }\n\n  render() {\n    return html`\n      <button\n        ?disabled=\"${this.#disabled}\"\n        data-counter=\"increment\"\n        \\@click=${() => this.counterController.send({ type: 'INC' })}\n      >\n        Increment\n      </button>\n      <button\n        ?disabled=\"${this.#disabled}\"\n        data-counter=\"decrement\"\n        \\@click=${() => this.counterController.send({ type: 'DEC' })}\n      >\n        Decrement\n      </button>\n    `;\n  }\n\n  // ...\n}\n```\n\n- [Web Component with Lit - Scaffolding](https://github.com/oscarmarina/create-wc)\n<hr>",
           "name": "XstateController",
           "members": [
             {
@@ -17,9 +17,16 @@
               "readonly": true
             },
             {
-              "kind": "field",
+              "kind": "method",
               "name": "send",
-              "readonly": true
+              "parameters": [
+                {
+                  "name": "ev",
+                  "type": {
+                    "text": "Object"
+                  }
+                }
+              ]
             },
             {
               "kind": "method",
@@ -37,6 +44,14 @@
               "kind": "field",
               "name": "propKey",
               "default": "propKey"
+            },
+            {
+              "kind": "field",
+              "name": "tempObj",
+              "type": {
+                "text": "object"
+              },
+              "default": "{}"
             }
           ]
         }
@@ -63,23 +78,9 @@
           "members": [
             {
               "kind": "field",
-              "name": "is",
-              "type": {
-                "text": "string"
-              },
-              "static": true,
-              "default": "'xstate-counter'"
-            },
-            {
-              "kind": "field",
               "name": "#disabled",
               "privacy": "private",
               "readonly": true
-            },
-            {
-              "kind": "field",
-              "name": "counterController",
-              "default": "new XstateController(this, counterMachine, '_xstate')"
             },
             {
               "kind": "field",
@@ -88,7 +89,13 @@
               "type": {
                 "text": "object"
               },
+              "default": "{}",
               "attribute": "_xstate"
+            },
+            {
+              "kind": "field",
+              "name": "counterController",
+              "default": "new XstateController(this, counterMachine, '_xstate')"
             }
           ],
           "attributes": [
@@ -97,6 +104,7 @@
               "type": {
                 "text": "object"
               },
+              "default": "{}",
               "fieldName": "_xstate"
             }
           ],
@@ -104,6 +112,7 @@
             "name": "LitElement",
             "package": "lit"
           },
+          "tagName": "xstate-counter",
           "customElement": true
         }
       ],
@@ -166,6 +175,7 @@
       "exports": [
         {
           "kind": "custom-element-definition",
+          "name": "xstate-counter",
           "declaration": {
             "name": "XstateCounter",
             "module": "/src/XstateCounter.js"

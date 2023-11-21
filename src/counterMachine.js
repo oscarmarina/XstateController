@@ -1,47 +1,46 @@
-import { createMachine, assign } from 'xstate/dist/xstate.web.js';
+import { createMachine, assign } from 'xstate';
 
 const states = {
   enabled: 'enabled',
   disabled: 'disabled',
 };
 
-const events = {
-  increment: 'INC',
-  decrement: 'DEC',
-  toggle: 'TOGGLE',
+const increment = {
+  counter: ({ context }) => context.counter + 1,
+  event: ({ event }) => event,
+};
+const decrement = {
+  counter: ({ context }) => context.counter - 1,
+  event: ({ event }) => event,
 };
 
-const increment = context => context.counter + 1;
-const decrement = context => context.counter - 1;
-
-const isNotMax = context => context.counter < 10;
-const isNotMin = context => context.counter > 0;
+const isNotMax = ({ context }) => context.counter < 10;
+const isNotMin = ({ context }) => context.counter > 0;
 
 export const counterMachine = createMachine({
+  /** @xstate-layout N4IgpgJg5mDOIC5QGMD2BXAdgFzAJwDoxMBDAIwBtIBiASQDkBhAbQAYBdRUAB1VgEts-VJi4gAHogAsATgIAOeQCZ5ARiUBWADQgAnolUB2eQVaGZANg2t5xmawuaAvk51osuQsXJUI1ACIAoiwcYrwCQiJikgiyBOqqrDIAzIbaeohqBBoubhg4+ESklDQAKgDyAOKVADKBbJxIIOGCwqJNMaoWyQTJSqzJ6un6CCqGBErJMhryyXPzc7kg7gWEEPywPmVVtfWhTS2R7aCd3b39g5o6I5MWBIZTMwsLqi6uIJioEHBiK55hfFaUQ6iAAtKprmCLEs-oVvCUIACIm1otJDJDRuYCFZHDl3rC1hstoiDoCjqjRvI7hZzBZbMNEColPENLi3k4gA */
   id: 'counter',
+  context: { counter: 0, event: undefined },
   initial: 'enabled',
-  context: {
-    counter: 0,
-  },
   states: {
-    [states.enabled]: {
+    enabled: {
       on: {
-        [events.increment]: {
-          actions: assign({ counter: increment }),
-          cond: isNotMax,
+        INC: {
+          actions: assign(increment),
+          guard: isNotMax,
         },
-        [events.decrement]: {
-          actions: assign({ counter: decrement }),
-          cond: isNotMin,
+        DEC: {
+          actions: assign(decrement),
+          guard: isNotMin,
         },
-        [events.toggle]: {
+        TOGGLE: {
           target: states.disabled,
         },
       },
     },
-    [states.disabled]: {
+    disabled: {
       on: {
-        [events.toggle]: {
+        TOGGLE: {
           target: states.enabled,
         },
       },
