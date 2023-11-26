@@ -1,13 +1,14 @@
-# XstateController
-
 ![Lit](https://img.shields.io/badge/lit-3.0.0-blue.svg)
 
-### Connect XState machines with Lit's reactive property
-The XstateReactiveController is a Lit Reactive Controller specifically designed for straightforward integration with XState.
-This controller allows you to subscribe to an XState actor, updating a specified reactive property whenever the state machine transitions.
+> This is an individual repository for the demo included in the Lit controller BlockquoteControllerXstate.
 
-- [xstate v5](https://stately.ai/docs/installation)
-- [xstate v5 - examples](https://stately.ai/docs/examples)
+- [You can find this controller in the following monorepo](https://github.com/oscarmarina/blockquote-web-components/tree/main/packages/controllers/blockquote-controller-xstate)
+
+***xstate-counter*** is a Lit component that uses a BlockquoteControllerXstate to connect a XState machine with Lit's reactive property.
+
+The `BlockquoteControllerXstate` is a Lit Reactive Controller specifically designed for straightforward integration with XState. This controller allows you to subscribe to an XState actor, updating a specified reactive property whenever the state machine transitions.
+
+- [XState 5](https://stately.ai/docs/installation)
 - [Original idea](https://codesandbox.io/s/z3o0s?file=/src/toggleMachine.ts)
 
 <hr>
@@ -16,8 +17,12 @@ This controller allows you to subscribe to an XState actor, updating a specified
 
 [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/oscarmarina/XstateController)
 
-[![Stately.ai](https://img.shields.io/badge/Stately.ai-black.svg)](https://stately.ai/registry/editor/154a7a42-9338-4cc0-8c0c-131c859d8349)
+[![Open in Stately.ai](https://img.shields.io/badge/Open%20in%20Stately.ai-black.svg)](https://stately.ai/registry/editor/154a7a42-9338-4cc0-8c0c-131c859d8349)
 
+### Install:
+```bash
+npm install && npm start
+```
 ### Usage
 
 ***counterMachine.js***
@@ -93,11 +98,11 @@ export const counterMachine = createMachine(
 );
 ```
 
-***XstateCounter.js***
+***xstate-counter.js***
 
 ```javascript
 import { html, LitElement } from 'lit';
-import { XstateController } from './XstateController.js';
+import { BlockquoteControllerXstate } from '@blockquote-web-components/blockquote-controller-xstate';
 import { counterMachine } from './counterMachine.js';
 
 export class XstateCounter extends LitElement {
@@ -111,7 +116,7 @@ export class XstateCounter extends LitElement {
   constructor() {
     super();
     this._xstate = {};
-    this.counterController = new XstateController(this, counterMachine, '_xstate');
+    this.counterController = new BlockquoteControllerXstate(this, counterMachine, '_xstate');
   }
 
   updated(props) {
@@ -155,37 +160,12 @@ export class XstateCounter extends LitElement {
 }
 ```
 
-- [Web Component with Lit - Scaffolding](https://github.com/oscarmarina/create-wc)
+**Scaffold generated using**:
+
+> [npm init @blockquote/wc](https://github.com/oscarmarina/create-wc)
+
 <hr>
 
-
-### `src/XstateController.js`:
-
-#### class: `XstateController`
-
-##### Fields
-
-| Name      | Privacy | Type | Default   | Description | Inherited From |
-| --------- | ------- | ---- | --------- | ----------- | -------------- |
-| `state`   |         |      |           |             |                |
-| `service` |         |      |           |             |                |
-| `propKey` |         |      | `propKey` |             |                |
-
-##### Methods
-
-| Name               | Privacy | Description | Parameters        | Return | Inherited From |
-| ------------------ | ------- | ----------- | ----------------- | ------ | -------------- |
-| `send`             |         |             | `ev: EventObject` |        |                |
-| `hostConnected`    |         |             |                   |        |                |
-| `hostDisconnected` |         |             |                   |        |                |
-
-<hr/>
-
-#### Exports
-
-| Kind | Name               | Declaration      | Module                  | Package |
-| ---- | ------------------ | ---------------- | ----------------------- | ------- |
-| `js` | `XstateController` | XstateController | src/XstateController.js |         |
 
 ### `src/XstateCounter.js`:
 
@@ -193,10 +173,10 @@ export class XstateCounter extends LitElement {
 
 ##### Fields
 
-| Name                | Privacy | Type     | Default                                                 | Description | Inherited From |
-| ------------------- | ------- | -------- | ------------------------------------------------------- | ----------- | -------------- |
-| `_xstate`           | public  | `object` | `{}`                                                    |             |                |
-| `counterController` |         |          | `new XstateController(this, counterMachine, '_xstate')` |             |                |
+| Name                | Privacy | Type     | Default                                                           | Description | Inherited From |
+| ------------------- | ------- | -------- | ----------------------------------------------------------------- | ----------- | -------------- |
+| `_xstate`           | public  | `object` | `{}`                                                              |             |                |
+| `counterController` |         |          | `new BlockquoteControllerXstate(this, counterMachine, '_xstate')` |             |                |
 
 ##### Attributes
 

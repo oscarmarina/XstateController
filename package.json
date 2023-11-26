@@ -1,5 +1,5 @@
 {
-  "name": "@blockquote/xstate-counter",
+  "name": "@blockquote-playground/xstate-counter",
   "version": "1.0.0-rc.1",
   "description": "This controller allows you to subscribe to an XState actor, updating a specified reactive property whenever the state machine transitions.",
   "keywords": [
@@ -66,7 +66,7 @@
     "lint:eslint": "eslint \"**/*.{js,ts,html}\" --ignore-path .eslintignore",
     "lint:prettier": "prettier \"**/*.{js,ts,json,html}\" --check --ignore-path .eslintignore",
     "lint:stylelint": "stylelint \"**/*.{scss,css}\" --allow-empty-input --ignore-path .eslintignore",
-    "prepare": "husky install",
+    "prepare": "husky",
     "preview:vite": "vite preview",
     "sass:watch": "sass-style-template",
     "sort:package": "npx sort-package-json",
@@ -152,35 +152,36 @@
     }
   },
   "dependencies": {
-    "lit": "^3.1.0",
-    "xstate": "^5.0.0-beta.45"
+    "@blockquote-web-components/blockquote-controller-xstate": "^1.1.6",
+    "lit": "^3.1.2",
+    "xstate": "^5.8.2"
   },
   "devDependencies": {
-    "@blockquote-web-components/blockquote-base-style-helpers": "^1.0.21",
+    "@blockquote-web-components/blockquote-base-style-helpers": "^1.1.10",
     "@blockquote/cem-to-markdown-readme": "^1.0.0",
     "@blockquote/coverage-table-reporter": "^1.2.0",
-    "@blockquote/rollup-plugin-total-bundlesize": "^2.1.1",
+    "@blockquote/rollup-plugin-total-bundlesize": "^2.1.2",
     "@blockquote/sass-style-template": "^3.0.2",
-    "@custom-elements-manifest/analyzer": "^0.9.0",
-    "@open-wc/eslint-config": "^12.0.2",
+    "@custom-elements-manifest/analyzer": "^0.9.2",
+    "@open-wc/eslint-config": "^12.0.3",
     "@open-wc/testing": "^4.0.0",
-    "@types/mocha": "^10.0.4",
+    "@types/mocha": "^10.0.6",
     "@ungap/global-this": "^0.4.4",
     "@web/rollup-plugin-html": "^2.1.2",
     "@web/test-runner": "^0.18.0",
     "@web/test-runner-playwright": "^0.11.0",
     "concurrently": "^8.2.2",
-    "eslint": "^8.53.0",
-    "eslint-config-prettier": "^9.0.0",
-    "husky": "^8.0.3",
-    "lint-staged": "^15.1.0",
-    "prettier": "^3.1.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.2",
+    "prettier": "^3.2.5",
     "rollup-plugin-copy": "^3.5.0",
-    "sort-package-json": "^2.6.0",
-    "stylelint": "^15.11.0",
-    "stylelint-config-standard-scss": "^11.1.0",
-    "ts-lit-plugin": "^2.0.1",
-    "vite": "^5.0.0"
+    "sort-package-json": "^2.8.0",
+    "stylelint": "^16.2.1",
+    "stylelint-config-standard-scss": "^13.0.0",
+    "ts-lit-plugin": "^2.0.2",
+    "vite": "^5.1.4"
   },
   "publishConfig": {
     "access": "public"

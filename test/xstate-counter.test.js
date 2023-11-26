@@ -12,7 +12,6 @@ suite('XstateCounter', () => {
   suite('Default', () => {
     setup(async () => {
       el = await fixture(html` <xstate-counter>light-dom</xstate-counter> `);
-      await el.updateComplete;
     });
 
     test('default counter 0', () => {
@@ -36,7 +35,6 @@ suite('XstateCounter', () => {
   suite('Events ', () => {
     setup(async () => {
       el = await fixture(html` <xstate-counter></xstate-counter> `);
-      await el.updateComplete;
     });
 
     test('increases the counter on Increment button click', () => {
