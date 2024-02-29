@@ -1,63 +1,32 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <title>Demo - xstate-counter</title>
+    <title>Vite + Lit + TS</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta charset="utf-8" />
-    <meta name="description" content="xstate-counter" />
+    <meta name="description" content="lit-ts" />
     <style>
       html,
       body {
         height: 100%;
+        margin: 0;
         font-family: sans-serif;
       }
-
       body {
-        margin: 3rem 0 0;
-        color: rgb(32, 32, 32);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #eaeaea;
       }
-
-      h1 {
-        font-size: 1.5rem;
-        font-weight: 400;
-        text-align: center;
-        margin: 0 0 2rem;
-      }
-
-      a {
-        color: rgb(0, 106, 220);
-        text-decoration: none;
-        border-bottom: 1px dashed rgb(197, 197, 197);
-      }
-
-      a:hover {
-        border-bottom-color: rgb(32, 32, 32);
+      :not(:defined) {
+        visibility: hidden;
       }
     </style>
   </head>
   <body>
-    <script type="module">
-      import { html, render } from 'lit';
-      import '../define/xstate-counter.js';
-
-      render(
-        html` <xstate-counter @counterchange="${ev => console.log('==>', ev.detail)}">
-          <h1>
-            State machine with
-            <a target="_blank" rel="noopener noreferrer" href="https://stately.ai/docs/installation"
-              >XState</a
-            >
-            and
-            <a
-              href="https://lit.dev/docs/composition/controllers/"
-              target="_blank"
-              rel="noopener noreferrer"
-              >Lit Controller</a
-            >
-          </h1>
-        </xstate-counter>`,
-        document.querySelector('body'),
-      );
-    </script>
+    <lit-ts>
+      <a href="./lit-ts-counter.html">View counter demo</a>
+    </lit-ts>
+    <script type="module" src="../define/lit-ts.ts"></script>
   </body>
 </html>

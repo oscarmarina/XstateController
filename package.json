@@ -1,190 +1,26 @@
 {
-  "name": "@blockquote-playground/xstate-counter",
-  "version": "1.0.0-rc.1",
-  "description": "This controller allows you to subscribe to an XState actor, updating a specified reactive property whenever the state machine transitions.",
-  "keywords": [
-    "lit",
-    "web-component",
-    "XState",
-    "stately",
-    "state-machine",
-    "statechart",
-    "actor"
-  ],
-  "homepage": "https://github.com/oscarmarina/XstateController",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/oscarmarina/XstateController.git"
-  },
-  "license": "MIT",
-  "author": "Oscar Marina",
+  "name": "lit-ts",
+  "private": true,
+  "version": "0.0.0",
   "type": "module",
-  "exports": {
-    ".": {
-      "default": "./index.js"
-    },
-    "./package.json": {
-      "default": "./package.json"
-    },
-    "./src/XstateController.js": {
-      "default": "./src/XstateController.js"
-    },
-    "./src/XstateCounter.js": {
-      "default": "./src/XstateCounter.js"
-    },
-    "./src/counterMachine.js": {
-      "default": "./src/counterMachine.js"
-    },
-    "./define/xstate-counter.js": {
-      "default": "./define/xstate-counter.js"
-    },
-    "./index.js": {
-      "default": "./index.js"
-    },
-    "./src/styles/xstate-counter-styles.css.js": {
-      "default": "./src/styles/xstate-counter-styles.css.js"
-    }
-  },
-  "main": "index.js",
-  "module": "index.js",
-  "files": [
-    "/define/",
-    "/src/",
-    "index.js",
-    "!/**/*.scss"
-  ],
   "scripts": {
-    "analyze": "cem analyze --litelement --globs \"{src,define}/**/*.{js,ts}\" \"index.js\"",
-    "build": "echo \"This is not a TypeScript project, so no need to build.\"",
-    "dev:vite": "vite build",
-    "format": "npm run format:eslint && npm run format:prettier && npm run format:stylelint",
-    "format:eslint": "eslint \"**/*.{js,ts,html}\" --fix --ignore-path .eslintignore",
-    "format:prettier": "prettier \"**/*.{js,ts,json,html}\" --write --ignore-path .eslintignore",
-    "format:stylelint": "stylelint \"**/*.{scss,css}\" --fix --allow-empty-input --ignore-path .eslintignore",
-    "postinstall": "npm run sort:package",
-    "lint": "npm run lint:eslint && npm run lint:prettier && npm run lint:stylelint",
-    "lint:eslint": "eslint \"**/*.{js,ts,html}\" --ignore-path .eslintignore",
-    "lint:prettier": "prettier \"**/*.{js,ts,json,html}\" --check --ignore-path .eslintignore",
-    "lint:stylelint": "stylelint \"**/*.{scss,css}\" --allow-empty-input --ignore-path .eslintignore",
-    "prepare": "husky",
-    "preview:vite": "vite preview",
-    "sass:watch": "sass-style-template",
-    "sort:package": "npx sort-package-json",
-    "start": "concurrently -k -r \"npm:sass:watch\" \"npm:vite\"",
-    "test": "wtr",
-    "test:watch": "wtr --watch",
-    "vite": "vite"
-  },
-  "lint-staged": {
-    "**/*.{js,ts,html}": [
-      "npm run format:eslint"
-    ],
-    "**/*.{js,ts,json,html}": [
-      "npm run format:prettier"
-    ],
-    "**/*.{scss,css}": [
-      "npm run format:stylelint"
-    ]
-  },
-  "prettier": {
-    "arrowParens": "avoid",
-    "printWidth": 100,
-    "singleQuote": true,
-    "trailingComma": "all",
-    "overrides": [
-      {
-        "files": "*.{scss,css}",
-        "options": {
-          "printWidth": 280,
-          "singleQuote": false
-        }
-      }
-    ]
-  },
-  "eslintConfig": {
-    "parserOptions": {
-      "ecmaVersion": "latest"
-    },
-    "extends": [
-      "@open-wc",
-      "prettier"
-    ],
-    "rules": {
-      "class-methods-use-this": "off",
-      "no-unused-expressions": [
-        "error",
-        {
-          "allowShortCircuit": true,
-          "allowTernary": true
-        }
-      ],
-      "object-curly-newline": "off",
-      "import/extensions": [
-        "error",
-        "always",
-        {
-          "ignorePackages": true
-        }
-      ],
-      "import/no-extraneous-dependencies": [
-        "error",
-        {
-          "devDependencies": [
-            "**/test/**/*.{js,ts}",
-            "**/*.config.{js,ts,mjs,cjs}",
-            "**/*.conf.{js,ts,mjs,cjs}"
-          ]
-        }
-      ],
-      "import/no-unresolved": "off",
-      "import/prefer-default-export": "off",
-      "lit/no-classfield-shadowing": "off",
-      "lit/no-native-attributes": "off"
-    }
-  },
-  "stylelint": {
-    "extends": "stylelint-config-standard-scss",
-    "rules": {
-      "custom-property-pattern": null,
-      "no-duplicate-selectors": null,
-      "color-function-notation": null,
-      "alpha-value-notation": null
-    }
+    "analyze": "cem analyze --litelement --globs \"{src,define}/**/*.{js,ts}\"",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "npm run dev"
   },
   "dependencies": {
-    "@blockquote-web-components/blockquote-controller-xstate": "^1.1.6",
+    "@statelyai/inspect": "^0.2.4",
     "lit": "^3.1.2",
     "xstate": "^5.8.2"
   },
   "devDependencies": {
-    "@blockquote-web-components/blockquote-base-style-helpers": "^1.1.10",
-    "@blockquote/cem-to-markdown-readme": "^1.0.0",
-    "@blockquote/coverage-table-reporter": "^1.2.0",
-    "@blockquote/rollup-plugin-total-bundlesize": "^2.1.2",
-    "@blockquote/sass-style-template": "^3.0.2",
     "@custom-elements-manifest/analyzer": "^0.9.2",
-    "@open-wc/eslint-config": "^12.0.3",
-    "@open-wc/testing": "^4.0.0",
-    "@types/mocha": "^10.0.6",
-    "@ungap/global-this": "^0.4.4",
     "@web/rollup-plugin-html": "^2.1.2",
-    "@web/test-runner": "^0.18.0",
-    "@web/test-runner-playwright": "^0.11.0",
-    "concurrently": "^8.2.2",
-    "eslint": "^8.57.0",
-    "eslint-config-prettier": "^9.1.0",
-    "husky": "^9.0.11",
-    "lint-staged": "^15.2.2",
-    "prettier": "^3.2.5",
-    "rollup-plugin-copy": "^3.5.0",
-    "sort-package-json": "^2.8.0",
-    "stylelint": "^16.2.1",
-    "stylelint-config-standard-scss": "^13.0.0",
-    "ts-lit-plugin": "^2.0.2",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3",
     "vite": "^5.1.4"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "customElements": "custom-elements.json"
 }
