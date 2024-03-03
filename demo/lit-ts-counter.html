@@ -2,8 +2,9 @@
 <html lang="en">
   <head>
     <title>Demo - xstate-lit</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta charset="utf-8" />
+    <link rel="icon" href="favicon.svg" sizes="any" type="image/svg+xml">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="xstate-lit" />
     <style>
       html,
@@ -23,5 +24,11 @@
       </lit-ts-counter>
     </main>
     <script type="module" src="../define/lit-ts-counter.ts"></script>
+    <script>
+      const logCounter = document.querySelector('lit-ts-counter');
+      logCounter.addEventListener('counterchange', ({ detail }) => {
+        console.log('counterchange:', detail);
+      });
+    </script>
   </body>
 </html>
