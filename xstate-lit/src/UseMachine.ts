@@ -3,11 +3,11 @@ import {
   Actor,
   AnyStateMachine,
   ActorOptions,
-  Subscription,
+  createActor,
   EventFrom,
-  SnapshotFrom
+  Subscription,
+  SnapshotFrom,
 } from 'xstate';
-import { useActorRef } from './useActorRef.js';
 
 export class UseMachine<TMachine extends AnyStateMachine>
   implements ReactiveController
@@ -15,8 +15,7 @@ export class UseMachine<TMachine extends AnyStateMachine>
   private host: ReactiveControllerHost;
   private machine: TMachine;
   private options?: ActorOptions<TMachine>;
-  private subscriptionProperty: string;
-  private shouldUpdateSubscriptionProperty: boolean;
+  private callback?: (snapshot: SnapshotFrom<TMachine>) => void;
   private actorRef = {} as Actor<TMachine>;
   private subs: Subscription = { unsubscribe: () => {} };
   private currentSnapshot: SnapshotFrom<TMachine>;
@@ -26,17 +25,16 @@ export class UseMachine<TMachine extends AnyStateMachine>
     {
       machine,
       options,
-      subscriptionProperty = ''
+      callback
     }: {
       machine: TMachine;
       options?: ActorOptions<TMachine>;
-      subscriptionProperty?: string;
+      callback?: (snapshot: SnapshotFrom<TMachine>) => void;
     }
   ) {
     this.machine = machine;
     this.options = options;
-    this.subscriptionProperty = subscriptionProperty;
-    this.shouldUpdateSubscriptionProperty = subscriptionProperty in host;
+    this.callback = callback;
     this.currentSnapshot = this.snapshot;
     this.onNext = this.onNext.bind(this);
 
@@ -59,24 +57,16 @@ export class UseMachine<TMachine extends AnyStateMachine>
     this.subs.unsubscribe();
   }
 
-  protected updateSubscriptionProperty(snapshot: SnapshotFrom<TMachine>) {
-    if (this.shouldUpdateSubscriptionProperty) {
-      (this.host as unknown as Record<string, unknown>)[
-        this.subscriptionProperty
-      ] = snapshot;
-    }
-  }
-
   protected onNext(snapshot: SnapshotFrom<TMachine>) {
     if (this.currentSnapshot !== snapshot) {
       this.currentSnapshot = snapshot;
-      this.updateSubscriptionProperty(snapshot);
+      this.callback?.(snapshot);
       this.host.requestUpdate();
     }
   }
 
   private startService() {
-    this.actorRef = useActorRef(this.machine, this.options);
+    this.actorRef = createActor(this.machine, this.options);
     this.subs = this.actorRef?.subscribe(this.onNext);
     this.actorRef?.start();
   }

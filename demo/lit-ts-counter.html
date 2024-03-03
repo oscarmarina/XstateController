@@ -23,5 +23,11 @@
       </lit-ts-counter>
     </main>
     <script type="module" src="../define/lit-ts-counter.ts"></script>
+    <script>
+      const logCounter = document.querySelector('lit-ts-counter');
+      logCounter.addEventListener('counterchange', ({ detail }) => {
+        console.log('counterchange:', detail);
+      });
+    </script>
   </body>
 </html>
