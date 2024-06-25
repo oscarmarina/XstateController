@@ -20,12 +20,17 @@ export class UseMachine<TMachine extends AnyStateMachine>
   private subs: Subscription = { unsubscribe: () => {} };
   private currentSnapshot: SnapshotFrom<TMachine>;
 
+  #sendHandler?: () => void;
+
+  // @ts-ignore
+  #sendHandlerNoNullish?: () => void;
+
   constructor(
     host: ReactiveControllerHost,
     {
       machine,
       options,
-      callback
+      callback,
     }: {
       machine: TMachine;
       options?: ActorOptions<TMachine>;
@@ -36,7 +41,6 @@ export class UseMachine<TMachine extends AnyStateMachine>
     this.options = options;
     this.callback = callback;
     this.currentSnapshot = this.snapshot;
-    this.onNext = this.onNext.bind(this);
 
     (this.host = host).addController(this);
   }
@@ -49,7 +53,30 @@ export class UseMachine<TMachine extends AnyStateMachine>
     return this.actorRef?.getSnapshot?.();
   }
 
+  // the function is invoked as soon as the template is processed, rather than in response to a click event.
+  sendHandlerCache(ev: EventFrom<TMachine>) {
+    console.log('#sendHandler::', ev);
+    // the use of "nullish assignment (??=)" causes it to be assigned only once
+    return (this.#sendHandler ??= () => this.sendEventFrom(ev));
+  }
+
+  // the function is invoked as soon as the template is processed, rather than in response to a click event.
+  sendHandler(ev: EventFrom<TMachine>) {
+    console.log('#sendHandlerNoNullish::', ev);
+    // In this way it works, but does it make sense to create a class field?
+    return (this.#sendHandlerNoNullish = () => this.sendEventFrom(ev));
+  }
+
+  // the function is invoked as soon as the template is processed, rather than in response to a click event.
   send(ev: EventFrom<TMachine>) {
+    console.log('send - arrow function::', ev);
+    // It works, the question is does it improve the DX?
+    // And does it eliminate the closure creation on every render for a small performance gain?
+    return () => this.sendEventFrom(ev);
+  }
+
+  sendEventFrom(ev: EventFrom<TMachine>) {
+    console.log('click::', ev);
     this.actorRef?.send(ev);
   }
 
@@ -57,13 +84,13 @@ export class UseMachine<TMachine extends AnyStateMachine>
     this.subs.unsubscribe();
   }
 
-  protected onNext(snapshot: SnapshotFrom<TMachine>) {
+  protected onNext = (snapshot: SnapshotFrom<TMachine>) => {
     if (this.currentSnapshot !== snapshot) {
       this.currentSnapshot = snapshot;
       this.callback?.(snapshot);
       this.host.requestUpdate();
     }
-  }
+  };
 
   private startService() {
     this.actorRef = createActor(this.machine, this.options);

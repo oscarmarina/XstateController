@@ -1,23 +1,16 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>Vite + Lit + TS</title>
+    <title>Demo - xstate-lit</title>
     <meta charset="utf-8" />
-    <link rel="icon" href="favicon.svg" sizes="any" type="image/svg+xml">
+    <link rel="icon" href="favicon.svg" sizes="any" type="image/svg+xml" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="lit-ts" />
+    <meta name="description" content="xstate-lit" />
     <style>
       html,
       body {
         height: 100%;
-        margin: 0;
         font-family: sans-serif;
-      }
-      body {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        background: #eaeaea;
       }
       :not(:defined) {
         visibility: hidden;
@@ -25,9 +18,15 @@
     </style>
   </head>
   <body>
-    <lit-ts>
-      <a href="./lit-ts-counter.html">View counter demo</a>
-    </lit-ts>
-    <script type="module" src="../define/lit-ts.ts"></script>
+    <main>
+      <lit-ts-counter></lit-ts-counter>
+    </main>
+    <script type="module" src="../define/lit-ts-counter.ts"></script>
+    <script>
+      const logCounter = document.querySelector('lit-ts-counter');
+      logCounter.addEventListener('counterchange', ({ detail }) => {
+        console.log('counterchange:', detail);
+      });
+    </script>
   </body>
 </html>

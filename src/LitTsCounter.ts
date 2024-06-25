@@ -64,25 +64,63 @@ export class LitTsCounter extends LitElement {
           <button
             ?disabled="${this.#disabled}"
             data-counter="increment"
-            @click=${() => this.counterController.send({ type: 'INC' })}
+            @click=${this.counterController.send({ type: 'INC' })}
           >
+
+
             Increment
           </button>
           <button
             ?disabled="${this.#disabled}"
             data-counter="decrement"
-            @click=${() => this.counterController.send({ type: 'DEC' })}
+            @click=${this.counterController.send({ type: 'DEC' })}
           >
             Decrement
           </button>
         </span>
-        <p>${this.counterController.snapshot.context.counter}</p>
+        <span class="mark-text">${this.counterController.snapshot.context.counter}</span>
+        <hr />
       </div>
-      <div>
-        <button @click=${() => this.counterController.send({ type: 'TOGGLE' })}>
+      <div class="row" aria-disabled="${this.#disabled}">
+        <span>
+          <button
+            ?disabled="${this.#disabled}"
+            data-counter="increment-handler"
+            @click=${this.counterController.sendHandler({ type: 'INC' })}
+          >
+            Increment - (handler)
+          </button>
+          <button
+            ?disabled="${this.#disabled}"
+            data-counter="decrement-handler"
+            @click=${this.counterController.sendHandler({ type: 'DEC' })}
+          >
+            Decrement - (handler)
+          </button>
+        </span>
+      </div>
+      <div class="row" aria-disabled="${this.#disabled}">
+        <span>
+          <button
+            ?disabled="${this.#disabled}"
+            data-counter="increment-cache"
+            @click=${this.counterController.sendHandlerCache({ type: 'INC' })}
+          >
+            Increment - (cache)
+          </button>
+          <button
+            ?disabled="${this.#disabled}"
+            data-counter="decrement-cache"
+            @click=${this.counterController.sendHandlerCache({ type: 'DEC' })}
+          >
+            Decrement - (cache)
+          </button>
+        </span>
+      </div>
+      <div class="mark">
+        <button @click=${this.counterController.send({ type: 'TOGGLE' })}>
           ${this.#disabled ? 'Enabled counter' : 'Disabled counter'}
         </button>
-        <span><slot></slot></span>
       </div>
     `;
   }

@@ -37,7 +37,7 @@ export const styles = css`
     cursor: not-allowed;
   }
 
-  p {
+  .mark-text {
     font-size: 1.5rem;
     min-width: 4.25rem;
     text-align: center;
@@ -77,18 +77,26 @@ export const styles = css`
     border: 0.0625rem solid var(--_mark-color);
     border-bottom: none;
   }
-  div + div {
+  .row {
+    flex-direction: column;
+  }
+
+  .row > span {
+    margin: 0;
+  }
+
+  .mark {
     position: relative;
     border-top: 0.0625rem dashed var(--_mark-color);
     border-bottom: 0.0625rem solid var(--_mark-color);
   }
 
-  div + div button {
+  .mark button {
     margin: 0 auto;
     min-width: 10.625rem;
   }
 
-  div + div span {
+  .mark span {
     position: absolute;
     display: block;
     bottom: -1.5rem;
