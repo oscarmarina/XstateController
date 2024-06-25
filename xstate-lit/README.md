@@ -1,6 +1,6 @@
 # @xstate/lit
 
-This package contains utilities for using [Lit](https://github.com/statelyai/xstate) with [Lit](https://github.com/litjs/lit).
+This package contains utilities for using [Xstate](https://github.com/statelyai/xstate) with [Lit](https://github.com/litjs/lit).
 
 - [Read the full documentation in the XState docs](https://xstate.js.org/docs/packages/xstate-lit/).
 - [Read our contribution guidelines](https://github.com/statelyai/xstate/blob/main/CONTRIBUTING.md).
