@@ -25,7 +25,7 @@ export class UseMachine<TMachine extends AnyStateMachine>
     {
       machine,
       options,
-      callback
+      callback,
     }: {
       machine: TMachine;
       options?: ActorOptions<TMachine>;
@@ -40,14 +40,24 @@ export class UseMachine<TMachine extends AnyStateMachine>
     (this.host = host).addController(this);
   }
 
+  /**
+   * The underlying ActorRef from XState
+   */
   get actor() {
     return this.actorRef;
   }
 
+  /**
+   * The latest snapshot of the actor's state
+   */
   get snapshot() {
     return this.actorRef?.getSnapshot?.();
   }
 
+  /**
+   * Send an event to the actor service
+   * @param {import('xstate').EventFrom<typeof this.machine>} ev
+   */
   send(ev: EventFrom<TMachine>) {
     this.actorRef?.send(ev);
   }
