@@ -53,6 +53,10 @@ export class LitTsCounter extends LitElement {
     }
   }
 
+  #send(ev: any) {
+    this.counterController.send(ev);
+  }
+
   get #disabled() {
     return this.counterController.snapshot.matches('disabled');
   }
@@ -64,14 +68,14 @@ export class LitTsCounter extends LitElement {
           <button
             ?disabled="${this.#disabled}"
             data-counter="increment"
-            @click=${() => this.counterController.send({ type: 'INC' })}
+            @click=${() => this.#send({ type: 'INC' })}
           >
             Increment
           </button>
           <button
             ?disabled="${this.#disabled}"
             data-counter="decrement"
-            @click=${() => this.counterController.send({ type: 'DEC' })}
+            @click=${() => this.#send({ type: 'DEC' })}
           >
             Decrement
           </button>
@@ -79,7 +83,7 @@ export class LitTsCounter extends LitElement {
         <p>${this.counterController.snapshot.context.counter}</p>
       </div>
       <div>
-        <button @click=${() => this.counterController.send({ type: 'TOGGLE' })}>
+        <button @click=${() => this.#send({ type: 'TOGGLE' })}>
           ${this.#disabled ? 'Enabled counter' : 'Disabled counter'}
         </button>
         <span><slot></slot></span>

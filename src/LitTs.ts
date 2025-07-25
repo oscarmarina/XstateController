@@ -23,6 +23,10 @@ export class LitTs extends LitElement {
     });
   }
 
+  #send(ev: any) {
+    this.feedbackController.send(ev);
+  }
+
   #getMatches(match: 'prompt' | 'thanks' | 'form' | 'closed') {
     return this.feedbackController.snapshot.matches(match);
   }
@@ -53,7 +57,7 @@ export class LitTs extends LitElement {
       <div class="close-feedback">
         <button
           class="close-button"
-          @click=${() => this.feedbackController.send({ type: 'close' })}
+          @click=${() => this.#send({ type: 'close' })}
         >
           Close
         </button>
@@ -69,14 +73,14 @@ export class LitTs extends LitElement {
         <button
           class="button"
           @click=${() =>
-            this.feedbackController.send({ type: 'feedback.good' })}
+            this.#send({ type: 'feedback.good' })}
         >
           Good
         </button>
 
         <button
           class="button"
-          @click=${() => this.feedbackController.send({ type: 'feedback.bad' })}
+          @click=${() => this.#send({ type: 'feedback.bad' })}
         >
           Bad
         </button>
@@ -102,7 +106,7 @@ export class LitTs extends LitElement {
         class="step"
         @submit=${(ev: Event) => {
           ev.preventDefault();
-          this.feedbackController.send({ type: 'submit' });
+          this.#send({ type: 'submit' });
         }}
       >
         <h2>What can we do better?</h2>
@@ -112,7 +116,7 @@ export class LitTs extends LitElement {
           rows="4"
           placeholder="So many things..."
           @input=${({ target }: { target: HTMLTextAreaElement }) =>
-            this.feedbackController.send({
+            this.#send({
               type: 'feedback.update',
               value: target.value
             })}
@@ -121,14 +125,14 @@ export class LitTs extends LitElement {
         <button
           class="button"
           ?disabled=${!this.feedbackController.snapshot.can({ type: 'submit' })}
-          @click=${() => this.feedbackController.send({ type: 'submit' })}
+          @click=${() => this.#send({ type: 'submit' })}
         >
           Submit
         </button>
 
         <button
           class="button"
-          @click=${() => this.feedbackController.send({ type: 'back' })}
+          @click=${() => this.#send({ type: 'back' })}
         >
           Back
         </button>
@@ -142,7 +146,7 @@ export class LitTs extends LitElement {
         <em>Feedback form closed.</em>
         <button
           class="button"
-          @click=${() => this.feedbackController.send({ type: 'restart' })}
+          @click=${() => this.#send({ type: 'restart' })}
         >
           Provide more feedback
         </button>
