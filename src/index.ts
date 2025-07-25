@@ -1,1 +1,1 @@
-export { LitTs } from './LitTs.js';
+export {FeedbackElement} from './FeedbackElement.js';

@@ -2,15 +2,14 @@ import { html, LitElement } from 'lit';
 import { createBrowserInspector } from '@statelyai/inspect';
 import { feedbackMachine } from './feedbackMachine.js';
 import { UseMachine } from '../xstate-lit/src/index.js';
-// import { UseMachine } from '@xstate/lit';
-import { styles } from './styles/lit-ts-styles.css.js';
+import { styles } from './styles/feedback-element-styles.css.js';
 
 const { inspect } = createBrowserInspector({
   // Comment out the line below to start the inspector
-  autoStart: false
+  autoStart: true
 });
 
-export class LitTs extends LitElement {
+export class FeedbackElement extends LitElement {
   static override styles = [styles];
 
   feedbackController: UseMachine<typeof feedbackMachine>;
@@ -23,12 +22,12 @@ export class LitTs extends LitElement {
     });
   }
 
-  #send(ev: any) {
-    this.feedbackController.send(ev);
-  }
-
   #getMatches(match: 'prompt' | 'thanks' | 'form' | 'closed') {
     return this.feedbackController.snapshot.matches(match);
+  }
+
+  #send(ev: any) {
+    this.feedbackController.send(ev);
   }
 
   override render() {
@@ -72,8 +71,7 @@ export class LitTs extends LitElement {
 
         <button
           class="button"
-          @click=${() =>
-            this.#send({ type: 'feedback.good' })}
+          @click=${() => this.#send({ type: 'feedback.good' })}
         >
           Good
         </button>
@@ -130,10 +128,7 @@ export class LitTs extends LitElement {
           Submit
         </button>
 
-        <button
-          class="button"
-          @click=${() => this.#send({ type: 'back' })}
-        >
+        <button class="button" @click=${() => this.#send({ type: 'back' })}>
           Back
         </button>
       </form>
@@ -144,10 +139,7 @@ export class LitTs extends LitElement {
     return html`
       <div>
         <em>Feedback form closed.</em>
-        <button
-          class="button"
-          @click=${() => this.#send({ type: 'restart' })}
-        >
+        <button class="button" @click=${() => this.#send({ type: 'restart' })}>
           Provide more feedback
         </button>
       </div>
@@ -157,6 +149,6 @@ export class LitTs extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lit-ts': LitTs;
+    'feedback-element': FeedbackElement;
   }
 }

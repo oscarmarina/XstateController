@@ -1,12 +1,11 @@
 import { html, LitElement } from 'lit';
 import { state } from 'lit/decorators.js';
-import { type InspectionEvent, SnapshotFrom } from 'xstate';
+import { type InspectionEvent, type SnapshotFrom } from 'xstate';
 import { counterMachine } from './counterMachine.js';
 import { UseMachine } from '../xstate-lit/src/index.js';
-// import { UseMachine } from '@xstate/lit';
-import { styles } from './styles/lit-ts-counter-styles.css.js';
+import { styles } from './styles/counter-element-styles.css.js';
 
-export class LitTsCounter extends LitElement {
+export class CounterElement extends LitElement {
   static override styles = [styles];
 
   #inspectEventsHandler: (inspEvent: InspectionEvent) => void =
@@ -18,30 +17,30 @@ export class LitTsCounter extends LitElement {
   counterController: UseMachine<typeof counterMachine> = new UseMachine(this, {
     machine: counterMachine,
     options: {
-      inspect: this.#inspectEventsHandler,
+      inspect: this.#inspectEventsHandler
     },
-    callback: this.#callbackHandler,
+    callback: this.#callbackHandler
   });
 
   @state()
-  _xstate: typeof this.counterController.snapshot =
-    {} as unknown as typeof this.counterController.snapshot;
+  xstate: typeof this.counterController.snapshot =
+    this.counterController.snapshot;
 
   override updated(props: Map<string, unknown>) {
     super.updated && super.updated(props);
-    if (props.has('_xstate')) {
-      const { context, value } = this._xstate;
+    if (props.has('xstate')) {
+      const { context, value } = this.xstate;
       const detail = { ...(context || {}), value };
       const counterEvent = new CustomEvent('counterchange', {
         bubbles: true,
-        detail,
+        detail
       });
       this.dispatchEvent(counterEvent);
     }
   }
 
   #callbackCounterController(snapshot: typeof this.counterController.snapshot) {
-    this._xstate = snapshot;
+    this.xstate = snapshot;
   }
 
   #inspectEvents(inspEvent: InspectionEvent) {
@@ -49,16 +48,16 @@ export class LitTsCounter extends LitElement {
       inspEvent.type === '@xstate.snapshot' &&
       inspEvent.event.type === 'xstate.stop'
     ) {
-      this._xstate = {} as unknown as typeof this.counterController.snapshot;
+      this.xstate = {} as unknown as typeof this.counterController.snapshot;
     }
-  }
-
-  #send(ev: any) {
-    this.counterController.send(ev);
   }
 
   get #disabled() {
     return this.counterController.snapshot.matches('disabled');
+  }
+
+  #send(event: any) {
+    this.counterController.send(event);
   }
 
   override render() {
@@ -94,6 +93,6 @@ export class LitTsCounter extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lit-ts-counter': LitTsCounter;
+    'counter-element': CounterElement;
   }
 }

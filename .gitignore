@@ -25,6 +25,7 @@ screenshots/.diff
 ## build
 _site
 dist
+lib
 build
 .tmp
 *.tgz

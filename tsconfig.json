@@ -1,27 +1,23 @@
 {
   "compilerOptions": {
-    "target": "es2021",
-    "lib": ["es2021", "DOM", "DOM.Iterable"],
-    "experimentalDecorators": true,
-    "module": "es2020",
-    "moduleResolution": "node",
-    "rootDirs": ["./src", "./define"],
-    "resolveJsonModule": true,
+    "target": "ESNext",
     "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "inlineSources": true,
-    "isolatedModules": true,
-    "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true,
+    "declarationDir": "./lib/",
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+    "module": "ESNext",
+    "lib": ["ESNext", "DOM"],
+    "moduleResolution": "Node",
     "strict": true,
-    "noImplicitAny": true,
-    "noImplicitThis": true,
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "noEmit": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitOverride": true
+    "skipLibCheck": true
   },
-  "include": ["src/**/*.ts", "define/**/*.ts"]
+  "include": ["src"]
 }
