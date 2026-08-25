@@ -1,23 +1,37 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
+    "allowArbitraryExtensions": true,
     "declaration": true,
-    "declarationDir": "./lib/",
-    "experimentalDecorators": true,
-    "useDefineForClassFields": false,
-    "module": "ESNext",
-    "lib": ["ESNext", "DOM"],
-    "moduleResolution": "Node",
-    "strict": true,
-    "allowImportingTsExtensions": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
+    "declarationDir": "./dist/",
+    "emitDeclarationOnly": true,
     "esModuleInterop": true,
-    "noEmit": true,
+    "experimentalDecorators": true,
+    "forceConsistentCasingInFileNames": true,
+    "lib": [
+      "es2023",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "esnext",
+    "moduleResolution": "Bundler",
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitAny": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noImplicitReturns": true,
-    "skipLibCheck": true
+    "resolveJsonModule": true,
+    "resolvePackageJsonExports": true,
+    "resolvePackageJsonImports": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "stripInternal": true,
+    "target": "es2023",
+    "useDefineForClassFields": false,
+    "verbatimModuleSyntax": true
   },
-  "include": ["src"]
+  "include": [
+    "src/**/*.ts"
+  ]
 }
