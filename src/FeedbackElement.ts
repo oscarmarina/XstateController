@@ -6,7 +6,7 @@ import { styles } from './styles/feedback-element-styles.css.js';
 
 const { inspect } = createBrowserInspector({
   // Comment out the line below to start the inspector
-  autoStart: true
+  autoStart: false
 });
 
 export class FeedbackElement extends LitElement {
@@ -23,7 +23,7 @@ export class FeedbackElement extends LitElement {
   }
 
   #getMatches(match: 'prompt' | 'thanks' | 'form' | 'closed') {
-    return this.feedbackController.snapshot.matches(match);
+    return this.feedbackController.snapshot?.matches(match);
   }
 
   #send(ev: any) {
@@ -91,8 +91,8 @@ export class FeedbackElement extends LitElement {
       <div class="step">
         <h2>Thanks for your feedback.</h2>
 
-        ${this.feedbackController.snapshot.context.feedback
-          ? html`<p>"${this.feedbackController.snapshot.context.feedback}"</p>`
+        ${this.feedbackController.snapshot?.context.feedback
+          ? html`<p>"${this.feedbackController.snapshot?.context.feedback}"</p>`
           : ''}
       </div>
     `;
@@ -122,7 +122,7 @@ export class FeedbackElement extends LitElement {
 
         <button
           class="button"
-          ?disabled=${!this.feedbackController.snapshot.can({ type: 'submit' })}
+          ?disabled=${!this.feedbackController.snapshot?.can({ type: 'submit' })}
           @click=${() => this.#send({ type: 'submit' })}
         >
           Submit

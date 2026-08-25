@@ -28,7 +28,7 @@ export class CounterElement extends LitElement {
 
   override updated(props: Map<string, unknown>) {
     super.updated && super.updated(props);
-    if (props.has('xstate')) {
+    if (props.has('xstate') && this.xstate && 'value' in this.xstate) {
       const { context, value } = this.xstate;
       const detail = { ...(context || {}), value };
       const counterEvent = new CustomEvent('counterchange', {
@@ -53,7 +53,7 @@ export class CounterElement extends LitElement {
   }
 
   get #disabled() {
-    return this.counterController.snapshot.matches('disabled');
+    return this.counterController.snapshot?.matches('disabled');
   }
 
   #send(event: any) {
@@ -79,7 +79,7 @@ export class CounterElement extends LitElement {
             Decrement
           </button>
         </span>
-        <p>${this.counterController.snapshot.context.counter}</p>
+        <p>${this.counterController.snapshot?.context.counter}</p>
       </div>
       <div>
         <button @click=${() => this.#send({ type: 'TOGGLE' })}>
