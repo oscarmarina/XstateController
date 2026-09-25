@@ -1,74 +1,77 @@
-import { setup, assign } from 'xstate';
+import { setup, type MachineContext } from 'xstate';
 
-/*
- * This state machine represents a simple counter that can be incremented, decremented, and toggled on and off.
- * The counter starts in the "enabled" state, where it can be incremented or decremented.
- * If the counter reaches its maximum value, it cannot be incremented further. Similarly, if the counter reaches its minimum value, it cannot be decremented further. The counter can also be toggled to the "disabled" state, where it cannot be incremented or decremented.
- * Toggling it again will bring it back to the "enabled" state.
- */
+type CounterContext = { counter: number };
 
-export const counterMachine = setup({
+type CounterGuards = {
+  canIncrement: (args: { context: CounterContext }) => boolean;
+  canDecrement: (args: { context: CounterContext }) => boolean;
+};
+
+type CounterActionArgs = {
+  context: MachineContext;
+  guards: CounterGuards;
+};
+
+const counterSetup = setup({
   types: {
-    context: {} as { counter: number; event: unknown },
-    events: {} as
-      | {
-          type: 'INC';
-        }
-      | {
-          type: 'DEC';
-        }
-      | {
-          type: 'TOGGLE';
-        }
-  },
-  actions: {
-    increment: assign({
-      counter: ({ context }) => context.counter + 1,
-      event: ({ event }) => event
-    }),
-    decrement: assign({
-      counter: ({ context }) => context.counter - 1,
-      event: ({ event }) => event
-    })
+    context: {} as CounterContext,
+    events: {} as { type: 'INC' } | { type: 'DEC' } | { type: 'TOGGLE' },
   },
   guards: {
-    isNotMax: ({ context }) => context.counter < 10,
-    isNotMin: ({ context }) => context.counter > 0
+    canIncrement: ({ context }) => context.counter < 10,
+    canDecrement: ({ context }) => context.counter > 0,
+  },
+  delays: {
+    backoff: ({ context }) => context.counter * 1000,
+  },
+});
+
+const incAction = ({ context, guards }: CounterActionArgs) => {
+  const counterContext = context as CounterContext;
+
+  if (guards.canIncrement({ context: counterContext })) {
+    return {
+      context: {
+        counter: counterContext.counter + 1,
+      },
+    };
   }
-}).createMachine({
-  id: 'counter',
-  context: { counter: 0, event: undefined },
+
+  return undefined;
+};
+
+const decAction = ({ context, guards }: CounterActionArgs) => {
+  const counterContext = context as CounterContext;
+
+  if (guards.canDecrement({ context: counterContext })) {
+    return {
+      context: {
+        counter: counterContext.counter - 1,
+      },
+    };
+  }
+
+  return undefined;
+};
+
+export const counterMachine = counterSetup.createMachine({
+  context: { counter: 0 },
   initial: 'enabled',
   states: {
     enabled: {
       on: {
-        INC: {
-          actions: {
-            type: 'increment'
-          },
-          guard: {
-            type: 'isNotMax'
-          }
-        },
-        DEC: {
-          actions: {
-            type: 'decrement'
-          },
-          guard: {
-            type: 'isNotMin'
-          }
-        },
-        TOGGLE: {
-          target: 'disabled'
-        }
-      }
+        INC: incAction,
+        DEC: decAction,
+        TOGGLE: { target: 'disabled' },
+      },
     },
     disabled: {
+      after: {
+        backoff: { target: 'enabled' },
+      },
       on: {
-        TOGGLE: {
-          target: 'enabled'
-        }
-      }
-    }
-  }
+        TOGGLE: { target: 'enabled' },
+      },
+    },
+  },
 });

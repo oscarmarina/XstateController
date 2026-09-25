@@ -5,6 +5,13 @@ import { counterMachine } from './counterMachine.js';
 import { UseMachine } from '../xstate-lit/src/index.js';
 import { styles } from './styles/counter-element-styles.css.js';
 
+type SnapshotInspectionEvent = {
+  type: '@xstate.snapshot';
+  event?: { type: string };
+};
+
+type CounterSnapshot = SnapshotFrom<typeof counterMachine>;
+
 export class CounterElement extends LitElement {
   static override styles = [styles];
 
@@ -17,14 +24,13 @@ export class CounterElement extends LitElement {
   counterController: UseMachine<typeof counterMachine> = new UseMachine(this, {
     machine: counterMachine,
     options: {
-      inspect: this.#inspectEventsHandler
+      inspect: this.#inspectEventsHandler,
     },
-    callback: this.#callbackHandler
+    callback: this.#callbackHandler,
   });
 
   @state()
-  xstate: typeof this.counterController.snapshot =
-    this.counterController.snapshot;
+  xstate: CounterSnapshot | undefined = this.counterController.snapshot;
 
   override updated(props: Map<string, unknown>) {
     super.updated && super.updated(props);
@@ -33,7 +39,7 @@ export class CounterElement extends LitElement {
       const detail = { ...(context || {}), value };
       const counterEvent = new CustomEvent('counterchange', {
         bubbles: true,
-        detail
+        detail,
       });
       this.dispatchEvent(counterEvent);
     }
@@ -41,15 +47,13 @@ export class CounterElement extends LitElement {
 
   #callbackCounterController(snapshot: typeof this.counterController.snapshot) {
     this.xstate = snapshot;
+    if (snapshot?.status === 'stopped') {
+      this.xstate = {} as unknown as CounterSnapshot;
+    }
   }
 
-  #inspectEvents(inspEvent: InspectionEvent) {
-    if (
-      inspEvent.type === '@xstate.snapshot' &&
-      inspEvent.event.type === 'xstate.stop'
-    ) {
-      this.xstate = {} as unknown as typeof this.counterController.snapshot;
-    }
+  #inspectEvents(inspEvent: InspectionEvent | SnapshotInspectionEvent) {
+    console.info('inspect event', inspEvent);
   }
 
   get #disabled() {

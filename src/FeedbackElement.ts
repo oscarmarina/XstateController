@@ -1,29 +1,54 @@
 import { html, LitElement } from 'lit';
-import { createBrowserInspector } from '@statelyai/inspect';
+// import { createBrowserInspector } from '@statelyai/inspect';
 import { feedbackMachine } from './feedbackMachine.js';
 import { UseMachine } from '../xstate-lit/src/index.js';
 import { styles } from './styles/feedback-element-styles.css.js';
 
-const { inspect } = createBrowserInspector({
-  // Comment out the line below to start the inspector
+/* const { inspect } = createBrowserInspector({
   autoStart: false
-});
+}); */
 
 export class FeedbackElement extends LitElement {
   static override styles = [styles];
 
-  feedbackController: UseMachine<typeof feedbackMachine>;
+  #inspectEventsHandler: (inspEvent: any) => void =
+    this.#inspectEvents.bind(this);
 
-  constructor() {
-    super();
-    this.feedbackController = new UseMachine(this, {
+  #callbackHandler: (snapshot: any) => void =
+    this.#callbackFeedbackController.bind(this);
+
+  feedbackController: UseMachine<typeof feedbackMachine> = new UseMachine(
+    this,
+    {
       machine: feedbackMachine,
-      options: { inspect }
-    });
-  }
+      options: {
+        inspect: this.#inspectEventsHandler,
+      },
+      callback: this.#callbackHandler,
+    },
+  );
+
+  @state()
+  xstate: typeof this.feedbackController.snapshot =
+    this.feedbackController.snapshot;
 
   #getMatches(match: 'prompt' | 'thanks' | 'form' | 'closed') {
     return this.feedbackController.snapshot?.matches(match);
+  }
+
+  #callbackFeedbackController(
+    snapshot: typeof this.feedbackController.snapshot,
+  ) {
+    this.xstate = snapshot;
+  }
+
+  #inspectEvents(inspEvent: any) {
+    if (
+      inspEvent.type === '@xstate.snapshot' &&
+      inspEvent.event?.type === 'xstate.stop'
+    ) {
+      this.xstate = {} as unknown as typeof this.feedbackController.snapshot;
+    }
   }
 
   #send(ev: any) {
@@ -91,9 +116,13 @@ export class FeedbackElement extends LitElement {
       <div class="step">
         <h2>Thanks for your feedback.</h2>
 
-        ${this.feedbackController.snapshot?.context.feedback
-          ? html`<p>"${this.feedbackController.snapshot?.context.feedback}"</p>`
-          : ''}
+        ${
+          this.feedbackController.snapshot?.context.feedback
+            ? html`<p>
+                "${this.feedbackController.snapshot?.context.feedback}"
+              </p>`
+            : ''
+        }
       </div>
     `;
   }
@@ -116,7 +145,7 @@ export class FeedbackElement extends LitElement {
           @input=${({ target }: { target: HTMLTextAreaElement }) =>
             this.#send({
               type: 'feedback.update',
-              value: target.value
+              value: target.value,
             })}
         ></textarea>
 

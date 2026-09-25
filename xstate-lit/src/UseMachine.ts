@@ -1,4 +1,4 @@
-import {createActor} from 'xstate';
+import { createActor } from 'xstate';
 import type {
   Actor,
   ActorOptions,
@@ -7,14 +7,171 @@ import type {
   SnapshotFrom,
   Subscription,
 } from 'xstate';
-import type {ReactiveController, ReactiveControllerHost} from 'lit';
+import type { ReactiveController, ReactiveControllerHost } from 'lit';
 
-interface XstateOptions<TMachine extends AnyStateMachine> {
+interface UseMachineOptions<TMachine extends AnyStateMachine> {
   machine: TMachine;
   options?: ActorOptions<TMachine>;
   callback?: (snapshot: SnapshotFrom<TMachine>) => void;
 }
 
+/**
+ * # UseMachine
+ *
+ * ![Lit](https://img.shields.io/badge/lit-3.0.0-blue.svg)
+ *
+ * ### Connect XState machines with Lit
+ * The UseMachine is a Lit Reactive Controller that is specifically designed to facilitate a integration with XState. This controller provides the capability to subscribe to an XState actor. It also provides a callback function to handle the state changes.
+ *
+ * - [xstate v6](https://stately.ai/docs/installation)
+ * - [xstate v6 - examples](https://stately.ai/docs/examples)
+ *
+ * <hr>
+ *
+ * ### Demo
+ *
+ * [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/oscarmarina/blockquote-web-components/tree/main/packages/controllers/blockquote-controller-xstate)
+ *
+ * [![Open in Stately.ai](https://img.shields.io/badge/Open%20in%20Stately.ai-black.svg)](https://stately.ai/registry/editor/154a7a42-9338-4cc0-8c0c-131c859d8349)
+ *
+ * ### Usage
+ *
+ * ***counterMachine.js***
+ *
+ * ```javascript
+ * import { createMachine } from 'xstate';
+ *
+ * const states = {
+ *   enabled: 'enabled',
+ *   disabled: 'disabled',
+ * };
+ *
+ * export const counterMachine = createMachine(
+ *   {
+ *     id: 'counter',
+ *     context: { counter: 0 },
+ *     initial: 'enabled',
+ *     states: {
+ *       enabled: {
+ *         on: {
+ *           INC: ({ context }) => {
+ *             if (context.counter < 10) {
+ *               return { context: { counter: context.counter + 1 } };
+ *             }
+ *           },
+ *           DEC: ({ context }) => {
+ *             if (context.counter > 0) {
+ *               return { context: { counter: context.counter - 1 } };
+ *             }
+ *           },
+ *           TOGGLE: {
+ *             target: states.disabled,
+ *           },
+ *         },
+ *       },
+ *       disabled: {
+ *         on: {
+ *           TOGGLE: {
+ *             target: states.enabled,
+ *           },
+ *         },
+ *       },
+ *     },
+ *   },
+ * );
+ * ```
+ *
+ * **`new UseMachine(this, {machine, options?, callback?})`**
+ *
+ * ***Usage***
+ *
+ * ```javascript
+ * import { html, LitElement } from 'lit';
+ * import { UseMachine } from '@xstate/lit';
+ * import { counterMachine } from './counterMachine.js';
+ * import { styles } from './styles/xstate-counter-styles.css.js';
+ *
+ * export class XstateCounter extends LitElement {
+ *   static properties = {
+ *     _xstate: {
+ *       type: Object,
+ *       state: true,
+ *     },
+ *   };
+ *
+ *   static styles = [styles];
+ *
+ *   constructor() {
+ *     super();
+ *     this._xstate = {};
+ *     this.counterController = new UseMachine(this, {
+ *       machine: counterMachine,
+ *       options: {
+ *         inspect: this._inspectEvents,
+ *       },
+ *       callback: this._callbackCounterController,
+ *     });
+ *   }
+ *
+ *   _callbackCounterController = snapshot => {
+ *     this._xstate = snapshot;
+ *   };
+ *
+ *   _inspectEvents = inspEvent => {
+ *     if (inspEvent.type === '@xstate.snapshot' && inspEvent.event.type === 'xstate.stop') {
+ *       this._xstate = {};
+ *     }
+ *   };
+ *
+ *   updated(props) {
+ *     super.updated && super.updated(props);
+ *     if (props.has('_xstate')) {
+ *       const { context, value } = this._xstate;
+ *       const counterEvent = new CustomEvent('counterchange', {
+ *         bubbles: true,
+ *         detail: { ...context, value },
+ *       });
+ *       this.dispatchEvent(counterEvent);
+ *     }
+ *   }
+ *
+ *   get #disabled() {
+ *     return this.counterController.snapshot.matches('disabled');
+ *   }
+ *
+ *   render() {
+ *     return html`
+ *       <slot></slot>
+ *       <div aria-disabled="${this.#disabled}">
+ *         <span>
+ *           <button
+ *             ?disabled="${this.#disabled}"
+ *             data-counter="increment"
+ *             \@click=${() => this.counterController.send({ type: 'INC' })}
+ *           >
+ *             Increment
+ *           </button>
+ *           <button
+ *             ?disabled="${this.#disabled}"
+ *             data-counter="decrement"
+ *             \@click=${() => this.counterController.send({ type: 'DEC' })}
+ *           >
+ *             Decrement
+ *           </button>
+ *         </span>
+ *         <p>${this.counterController.snapshot.context.counter}</p>
+ *       </div>
+ *       <div>
+ *         <button \@click=${() => this.counterController.send({ type: 'TOGGLE' })}>
+ *           ${this.#disabled ? 'Enabled counter' : 'Disabled counter'}
+ *         </button>
+ *       </div>
+ *     `;
+ *   }
+ * }
+ * ```
+ * <hr>
+ */
 export class UseMachine<
   TMachine extends AnyStateMachine,
   THost extends ReactiveControllerHost = ReactiveControllerHost,
@@ -33,7 +190,7 @@ export class UseMachine<
    */
   constructor(
     host: THost,
-    {machine, options, callback}: XstateOptions<TMachine>
+    { machine, options, callback }: UseMachineOptions<TMachine>,
   ) {
     this.machine = machine;
     this.options = options;
@@ -54,7 +211,7 @@ export class UseMachine<
    * The latest snapshot of the actor's state
    */
   get snapshot(): SnapshotFrom<TMachine> | undefined {
-    return this.actorRef?.getSnapshot?.();
+    return this.actorRef?.getSnapshot();
   }
 
   /**
