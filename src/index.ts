@@ -1,1 +1,1 @@
-export {FeedbackElement} from './FeedbackElement.js';
+export { FeedbackElement } from './FeedbackElement.js';

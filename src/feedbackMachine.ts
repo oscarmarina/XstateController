@@ -1,34 +1,23 @@
-import { setup } from 'xstate';
+import { setup, types } from 'xstate';
 
 const feedbackSetup = setup({
-  types: {
-    context: {} as { feedback: string },
-    events: {} as
-      | { type: 'feedback.good' }
-      | { type: 'feedback.bad' }
-      | { type: 'feedback.update'; value: string }
-      | { type: 'submit' }
-      | { type: 'close' }
-      | { type: 'back' }
-      | { type: 'restart' },
+  // v6: `schemas` (Standard Schema). `types<T>()` is type-only, no runtime validation.
+  schemas: {
+    context: types<{ feedback: string }>(),
+    events: {
+      'feedback.good': types<void>(),
+      'feedback.bad': types<void>(),
+      'feedback.update': types<{ value: string }>(),
+      submit: types<void>(),
+      close: types<void>(),
+      back: types<void>(),
+      restart: types<void>(),
+    },
   },
   guards: {
     feedbackValid: ({ context }) => context.feedback.length > 0,
   },
 });
-
-const updateAction: any = ({ event }: any) => {
-  return { context: { feedback: event.value } };
-};
-const submitAction: any = ({ context, guards }: any) => {
-  if (guards.feedbackValid({ context })) {
-    return { target: 'thanks' };
-  }
-  return undefined;
-};
-const restartAction: any = () => {
-  return { target: 'prompt', context: { feedback: '' } };
-};
 
 export const feedbackMachine = feedbackSetup.createMachine({
   id: 'feedback',
@@ -43,15 +32,18 @@ export const feedbackMachine = feedbackSetup.createMachine({
     },
     form: {
       on: {
-        'feedback.update': updateAction,
+        'feedback.update': ({ event }) => ({
+          context: { feedback: event.value },
+        }),
         back: { target: 'prompt' },
-        submit: submitAction,
+        submit: ({ context, guards }) =>
+          guards.feedbackValid({ context }) ? { target: 'thanks' } : undefined,
       },
     },
     thanks: {},
     closed: {
       on: {
-        restart: restartAction,
+        restart: () => ({ target: 'prompt', context: { feedback: '' } }),
       },
     },
   },

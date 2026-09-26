@@ -5,11 +5,6 @@ import { counterMachine } from './counterMachine.js';
 import { UseMachine } from '../xstate-lit/src/index.js';
 import { styles } from './styles/counter-element-styles.css.js';
 
-type SnapshotInspectionEvent = {
-  type: '@xstate.snapshot';
-  event?: { type: string };
-};
-
 type CounterSnapshot = SnapshotFrom<typeof counterMachine>;
 
 export class CounterElement extends LitElement {
@@ -46,13 +41,14 @@ export class CounterElement extends LitElement {
   }
 
   #callbackCounterController(snapshot: typeof this.counterController.snapshot) {
-    this.xstate = snapshot;
     if (snapshot?.status === 'stopped') {
-      this.xstate = {} as unknown as CounterSnapshot;
+      this.xstate = {} as CounterSnapshot;
+    } else {
+      this.xstate = snapshot;
     }
   }
 
-  #inspectEvents(inspEvent: InspectionEvent | SnapshotInspectionEvent) {
+  #inspectEvents(inspEvent: InspectionEvent) {
     console.info('inspect event', inspEvent);
   }
 
@@ -89,8 +85,15 @@ export class CounterElement extends LitElement {
         <button @click=${() => this.#send({ type: 'TOGGLE' })}>
           ${this.#disabled ? 'Enabled counter' : 'Disabled counter'}
         </button>
-        <span><slot></slot></span>
       </div>
+      <span>
+        <slot></slot>
+        <span
+          >The “Disabled counter” disables the counter for: <br />
+          ${(this.counterController.snapshot?.context.counter ?? 0) * 1000}
+          milliseconds.</span
+        >
+      </span>
     `;
   }
 }

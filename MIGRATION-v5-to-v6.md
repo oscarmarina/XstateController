@@ -1,7 +1,7 @@
 # XState v5 → v6 Migration Guide
 
-> Compares XState v5 (`^5.32.5`, commit `c9bb982`) and v6 (`^6.0.0-alpha.59`, current).
-> The v6 examples reflect the current repository; the v5 blocks are reconstructed reference versions.
+> Compares XState v5 (`^5.32.5`, commit `c9bb982`) and v6 (`^6.0.0-alpha.59`, the version used for the migration examples).
+> The v6 examples reflect the repository implementation at the time of the migration; the v5 blocks are reconstructed reference versions.
 
 ---
 
@@ -55,31 +55,26 @@ export const counterMachine = setup({
 
 ```ts
 // src/counterMachine.ts — v6
-import { setup } from 'xstate';
+import { setup, types } from 'xstate';
 
 const counterSetup = setup({
-  types: {
-    context: {} as { counter: number },
-    events: {} as { type: 'INC' } | { type: 'DEC' } | { type: 'TOGGLE' },
+  // v6: `schemas` (Standard Schema). `types<T>()` is type-only, no runtime validation.
+  schemas: {
+    context: types<{ counter: number }>(),
+    events: {
+      INC: types<void>(),
+      DEC: types<void>(),
+      TOGGLE: types<void>(),
+    },
   },
   guards: {
     canIncrement: ({ context }) => context.counter < 10,
     canDecrement: ({ context }) => context.counter > 0,
   },
+  delays: {
+    backoff: ({ context }) => context.counter * 1000,
+  },
 });
-
-const incAction: any = ({ context, guards }: any) => {
-  if (guards.canIncrement({ context })) {
-    return { context: { counter: context.counter + 1 } };
-  }
-  return undefined;
-};
-const decAction: any = ({ context, guards }: any) => {
-  if (guards.canDecrement({ context })) {
-    return { context: { counter: context.counter - 1 } };
-  }
-  return undefined;
-};
 
 export const counterMachine = counterSetup.createMachine({
   context: { counter: 0 },
@@ -87,13 +82,25 @@ export const counterMachine = counterSetup.createMachine({
   states: {
     enabled: {
       on: {
-        INC: incAction,
-        DEC: decAction,
+        // Transition functions: return the next `context`, or `undefined` to ignore the event
+        INC: ({ context, guards }) =>
+          guards.canIncrement({ context })
+            ? { context: { counter: context.counter + 1 } }
+            : undefined,
+        DEC: ({ context, guards }) =>
+          guards.canDecrement({ context })
+            ? { context: { counter: context.counter - 1 } }
+            : undefined,
         TOGGLE: { target: 'disabled' },
       },
     },
     disabled: {
-      on: { TOGGLE: { target: 'enabled' } },
+      after: {
+        backoff: { target: 'enabled' },
+      },
+      on: {
+        TOGGLE: { target: 'enabled' },
+      },
     },
   },
 });
@@ -102,10 +109,19 @@ export const counterMachine = counterSetup.createMachine({
 **Key changes:**
 | v5 | v6 |
 |---|---|
-| `import { setup, assign } from 'xstate'` | `import { setup } from 'xstate'` |
-| Actions declared as `assign({ key: fn })` inside `setup({ actions })` | Actions are functions returned from `setup`, but **guards + assign are inlined** in transition functions |
-| Transitions use `{ actions: { type }, guard: { type } }` | Transitions use **function calls** with `guards.xxx({ context })` and return `{ context: {...} }` |
+| `import { setup, assign } from 'xstate'` | `import { setup, types } from 'xstate'` |
+| `setup({ types: { context: {} as C, events: {} as E } })` | `setup({ schemas: { context: types<C>(), events: { INC: types<void>(), ... } } })` — events are a map keyed by `type` |
+| Actions declared as `assign({ key: fn })` inside `setup({ actions })` | Transition functions return updates such as `{ context: {...} }`; guards can be read from `setup` |
+| Transitions use `{ actions: { type }, guard: { type } }` | Transitions can use **functions** that call `guards.xxx({ context })` and return `{ context: {...} }` |
 | `assign` is a named export | `assign` is **not** exported in v6 |
+| String target shorthand `TOGGLE: 'disabled'` | Use `{ target: 'disabled' }` (the string shorthand is rejected by the v6 types) |
+
+> **`types` vs `schemas`:** v6 `setup()` does not have a `types` option. When `guards`/`delays`
+> are present TypeScript does not report it as an unknown property, but it is ignored: `context`,
+> `event` and `guards` stay untyped (hence the `any`/casts that were needed before). `schemas` takes
+> any [Standard Schema](https://standardschema.dev) (Zod, Valibot, ArkType...) for runtime validation,
+> or `types<T>()` from `xstate` for type-only declarations. With `schemas`, transition functions
+> can be written inline and are fully typed, and `actor.send()` rejects unknown events or payloads.
 
 ---
 
@@ -167,37 +183,26 @@ export const feedbackMachine = setup({
 
 ```ts
 // src/feedbackMachine.ts — v6
-import { setup } from 'xstate';
+import { setup, types } from 'xstate';
 
 const feedbackSetup = setup({
-  types: {
-    context: {} as { feedback: string },
-    events: {} as
-      | { type: 'feedback.good' }
-      | { type: 'feedback.bad' }
-      | { type: 'feedback.update'; value: string }
-      | { type: 'submit' }
-      | { type: 'close' }
-      | { type: 'back' }
-      | { type: 'restart' },
+  // v6: `schemas` (Standard Schema). `types<T>()` is type-only, no runtime validation.
+  schemas: {
+    context: types<{ feedback: string }>(),
+    events: {
+      'feedback.good': types<void>(),
+      'feedback.bad': types<void>(),
+      'feedback.update': types<{ value: string }>(),
+      submit: types<void>(),
+      close: types<void>(),
+      back: types<void>(),
+      restart: types<void>(),
+    },
   },
   guards: {
     feedbackValid: ({ context }) => context.feedback.length > 0,
   },
 });
-
-const updateAction: any = ({ event }: any) => {
-  return { context: { feedback: event.value } };
-};
-const submitAction: any = ({ context, guards }: any) => {
-  if (guards.feedbackValid({ context })) {
-    return { target: 'thanks' };
-  }
-  return undefined;
-};
-const restartAction: any = () => {
-  return { target: 'prompt', context: { feedback: '' } };
-};
 
 export const feedbackMachine = feedbackSetup.createMachine({
   id: 'feedback',
@@ -212,17 +217,22 @@ export const feedbackMachine = feedbackSetup.createMachine({
     },
     form: {
       on: {
-        'feedback.update': updateAction,
+        'feedback.update': ({ event }) => ({ context: { feedback: event.value } }),
         back: { target: 'prompt' },
-        submit: submitAction,
+        submit: ({ context, guards }) =>
+          guards.feedbackValid({ context }) ? { target: 'thanks' } : undefined,
       },
     },
     thanks: {},
     closed: {
-      on: { restart: restartAction },
+      on: {
+        restart: () => ({ target: 'prompt', context: { feedback: '' } }),
+      },
     },
   },
-  on: { close: { target: '.closed' } },
+  on: {
+    close: { target: '.closed' },
+  },
 });
 ```
 
@@ -271,7 +281,7 @@ import { type InspectionEvent, type SnapshotFrom } from 'xstate';
 ### v6
 
 ```ts
-// v6 — InspectionEvent sigue exportado, pero no cubre @xstate.snapshot
+// v6 — InspectionEvent is still exported, but does not include @xstate.snapshot
 import { type InspectionEvent, type SnapshotFrom } from 'xstate';
 
 type SnapshotInspectionEvent = {
@@ -287,11 +297,16 @@ type SnapshotInspectionEvent = {
 }
 ```
 
-En `xstate@6.0.0-alpha.59`, `InspectionEvent` sigue exportado. Sin embargo,
-su unión de tipos no incluye correctamente el evento `@xstate.snapshot`, aunque
-el runtime puede entregarlo a `options.inspect`. Por eso conviene extenderlo
-localmente con el tipo del snapshot, en lugar de degradar todo el parámetro a
-`any`. La propiedad `event` debe tratarse como opcional.
+In `xstate@6.0.0-alpha.59`, `InspectionEvent` is still exported. However, its
+type union does not correctly include the `@xstate.snapshot` event, even though
+the runtime can pass it to `options.inspect`. Extend the type locally with the
+snapshot event rather than degrading the entire parameter to `any`. The `event`
+property should be treated as optional.
+
+Starting with alpha.60, the inspection protocol changed: `InspectionEvent` uses
+`@xstate.transition` (which carries a snapshot) instead of a separate
+`@xstate.snapshot` event. This workaround is specific to alpha.59 and should
+not be carried forward unchanged.
 
 ---
 
@@ -371,7 +386,7 @@ Replace with the built-in `options.inspect` callback on the actor.
 | **Guards** | `{ guard: 'name' }` or `{ guard: { type } }` in config | Inline `guards.xxx({ context })` inside transition functions |
 | **Transition actions** | `{ actions: { type } }` in config | Function transitions returning `{ context }` or `{ target, context }` |
 | **`getSnapshot`** | `actorRef?.getSnapshot?.()` | `actorRef?.getSnapshot()` |
-| **`InspectionEvent`** | Exported from `xstate` | Sigue exportado; ampliar localmente para `@xstate.snapshot` |
+| **`InspectionEvent`** | Exported from `xstate` | Still exported; extend locally for `@xstate.snapshot` |
 | **`@statelyai/inspect`** | Compatible | Incompatible (requires xstate v5) |
 | **`FeedbackElement`** | Constructor-assigned controller | Field-initialized controller with callback |
-| **TypeScript** | Both used TS with `setup({ types })` | Same, but `assign` import removed |
+| **TypeScript** | `setup({ types: { context: {} as C, events: {} as E } })` | `setup({ schemas: { context: types<C>(), events: { NAME: types<Payload>() } } })` (Standard Schema) |

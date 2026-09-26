@@ -23,7 +23,7 @@ export const styles = css`
     display: block;
     color: var(--color-primary);
     white-space: nowrap;
-    text-indent: -1.5rem;
+    margin-block-end: 0.5rem;
     text-decoration: none;
     margin-top: 0.5rem;
   }

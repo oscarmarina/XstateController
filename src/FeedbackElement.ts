@@ -1,4 +1,5 @@
 import { html, LitElement } from 'lit';
+import { state } from 'lit/decorators.js';
 // import { createBrowserInspector } from '@statelyai/inspect';
 import { feedbackMachine } from './feedbackMachine.js';
 import { UseMachine } from '../xstate-lit/src/index.js';
@@ -67,13 +68,14 @@ export class FeedbackElement extends LitElement {
         ${this._closeFeedbackTpl}
         ${this.#getMatches('prompt') ? this._promptTpl : ''}
         ${this.#getMatches('thanks') ? this._thanksTpl : ''}
-        ${this.#getMatches('form') ? this._formTpl : ''} ${this._slotTpl}
+        ${this.#getMatches('form') ? this._formTpl : ''}
       </div>
+      ${this._slotTpl}
     `;
   }
 
   get _slotTpl() {
-    return html`<div><slot></slot></div> `;
+    return html`<div><slot></slot></div>`;
   }
 
   get _closeFeedbackTpl() {
@@ -151,7 +153,9 @@ export class FeedbackElement extends LitElement {
 
         <button
           class="button"
-          ?disabled=${!this.feedbackController.snapshot?.can({ type: 'submit' })}
+          ?disabled=${!this.feedbackController.snapshot?.can({
+            type: 'submit',
+          })}
           @click=${() => this.#send({ type: 'submit' })}
         >
           Submit

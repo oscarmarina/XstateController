@@ -4,16 +4,33 @@ import type {
   ActorOptions,
   AnyStateMachine,
   EventFrom,
+  Snapshot,
   SnapshotFrom,
   Subscription,
 } from 'xstate';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 
-interface UseMachineOptions<TMachine extends AnyStateMachine> {
+export interface UseMachineOptions<TMachine extends AnyStateMachine> {
   machine: TMachine;
   options?: ActorOptions<TMachine>;
+  /** Called with every new snapshot emitted by the actor. */
   callback?: (snapshot: SnapshotFrom<TMachine>) => void;
+  /**
+   * Called when the actor errors. The `'error'` snapshot is also sent to `callback`.
+   * If omitted, the error is reported as unhandled (`reportError`).
+   */
+  onError?: (error: unknown) => void;
 }
+
+const reportUnhandledError = (error: unknown): void => {
+  if (typeof globalThis.reportError === 'function') {
+    globalThis.reportError(error);
+  } else {
+    setTimeout(() => {
+      throw error;
+    });
+  }
+};
 
 /**
  * # UseMachine
@@ -36,54 +53,73 @@ interface UseMachineOptions<TMachine extends AnyStateMachine> {
  *
  * ### Usage
  *
- * ***counterMachine.js***
+ * ***counterMachine.ts***
  *
- * ```javascript
- * import { createMachine } from 'xstate';
+ * ```ts
+ * import { setup, types } from 'xstate';
  *
- * const states = {
- *   enabled: 'enabled',
- *   disabled: 'disabled',
- * };
+ * const counterSetup = setup({
+ *   // v6: `schemas` (Standard Schema). `types<T>()` is type-only, no runtime validation.
+ *   // Zod, Valibot, ArkType... can be used instead to validate at runtime.
+ *   schemas: {
+ *     context: types<{ counter: number }>(),
+ *     events: {
+ *       INC: types<void>(),
+ *       DEC: types<void>(),
+ *       TOGGLE: types<void>(),
+ *     },
+ *   },
+ *   guards: {
+ *     canIncrement: ({ context }) => context.counter < 10,
+ *     canDecrement: ({ context }) => context.counter > 0,
+ *   },
+ *   delays: {
+ *     backoff: ({ context }) => context.counter * 1000,
+ *   },
+ * });
  *
- * export const counterMachine = createMachine(
- *   {
- *     id: 'counter',
- *     context: { counter: 0 },
- *     initial: 'enabled',
- *     states: {
- *       enabled: {
- *         on: {
- *           INC: ({ context }) => {
- *             if (context.counter < 10) {
- *               return { context: { counter: context.counter + 1 } };
- *             }
- *           },
- *           DEC: ({ context }) => {
- *             if (context.counter > 0) {
- *               return { context: { counter: context.counter - 1 } };
- *             }
- *           },
- *           TOGGLE: {
- *             target: states.disabled,
- *           },
- *         },
+ * export const counterMachine = counterSetup.createMachine({
+ *   context: { counter: 0 },
+ *   initial: 'enabled',
+ *   states: {
+ *     enabled: {
+ *       on: {
+ *         // Transition functions (typed from `schemas`): return the next `context`,
+ *         // or `undefined` to ignore the event
+ *         INC: ({ context, guards }) =>
+ *           guards.canIncrement({ context }) ? { context: { counter: context.counter + 1 } } : undefined,
+ *         DEC: ({ context, guards }) =>
+ *           guards.canDecrement({ context }) ? { context: { counter: context.counter - 1 } } : undefined,
+ *         // v6 types do not accept the string shorthand (`TOGGLE: 'disabled'`)
+ *         TOGGLE: { target: 'disabled' },
  *       },
- *       disabled: {
- *         on: {
- *           TOGGLE: {
- *             target: states.enabled,
- *           },
- *         },
+ *     },
+ *     disabled: {
+ *       after: {
+ *         backoff: { target: 'enabled' },
+ *       },
+ *       on: {
+ *         TOGGLE: { target: 'enabled' },
  *       },
  *     },
  *   },
- * );
+ * });
  * ```
  *
- * **`new UseMachine(this, {machine, options?, callback?})`**
+ * **`new UseMachine(this, {machine, options?, callback?, onError?})`**
  *
- * ***Usage***
+ * - `machine`: the XState machine.
+ * - `options`: `createActor` options (`input`, `inspect`, ...).
+ * - `callback`: called with every new snapshot: the first one on each connection and the last one
+ * (`snapshot.status === 'stopped'`) when the host is disconnected.
+ * - `onError`: called when the actor errors (the `'error'` snapshot is also sent to `callback`).
+ *   If omitted, the error is reported as unhandled (`reportError`).
+ *
+ * The actor is created in the constructor, so `snapshot`, `actor` and `send` are available
+ * before the host is connected. It is started on `hostConnected` and stopped on `hostDisconnected`;
+ * a new actor (initial state) is created if the host is connected again.
+ *
+ * ***xstate-counter.js***
  *
  * ```javascript
  * import { html, LitElement } from 'lit';
@@ -113,19 +149,20 @@ interface UseMachineOptions<TMachine extends AnyStateMachine> {
  *     });
  *   }
  *
- *   _callbackCounterController = snapshot => {
+ *   _callbackCounterController = (snapshot) => {
  *     this._xstate = snapshot;
  *   };
  *
- *   _inspectEvents = inspEvent => {
- *     if (inspEvent.type === '@xstate.snapshot' && inspEvent.event.type === 'xstate.stop') {
+ *   // xstate v6 inspection events: '@xstate.actor' | '@xstate.transition' | '@xstate.deadletter'
+ *   _inspectEvents = (inspEvent) => {
+ *     if (inspEvent.type === '@xstate.transition' && inspEvent.snapshot.status === 'stopped') {
  *       this._xstate = {};
  *     }
  *   };
  *
  *   updated(props) {
- *     super.updated && super.updated(props);
- *     if (props.has('_xstate')) {
+ *     super.updated?.(props);
+ *     if (props.has('_xstate') && this._xstate && 'value' in this._xstate) {
  *       const { context, value } = this._xstate;
  *       const counterEvent = new CustomEvent('counterchange', {
  *         bubbles: true,
@@ -136,30 +173,28 @@ interface UseMachineOptions<TMachine extends AnyStateMachine> {
  *   }
  *
  *   get #disabled() {
- *     return this.counterController.snapshot.matches('disabled');
+ *     return this.counterController.snapshot?.matches('disabled');
  *   }
  *
  *   render() {
  *     return html`
  *       <slot></slot>
- *       <div aria-disabled="${this.#disabled}">
+ *       <div data-disabled="${this.#disabled}">
  *         <span>
  *           <button
  *             ?disabled="${this.#disabled}"
  *             data-counter="increment"
- *             \@click=${() => this.counterController.send({ type: 'INC' })}
- *           >
+ *             \@click=${() => this.counterController.send({ type: 'INC' })}>
  *             Increment
  *           </button>
  *           <button
  *             ?disabled="${this.#disabled}"
  *             data-counter="decrement"
- *             \@click=${() => this.counterController.send({ type: 'DEC' })}
- *           >
+ *             \@click=${() => this.counterController.send({ type: 'DEC' })}>
  *             Decrement
  *           </button>
  *         </span>
- *         <p>${this.counterController.snapshot.context.counter}</p>
+ *         <p>${this.counterController.snapshot?.context.counter}</p>
  *       </div>
  *       <div>
  *         <button \@click=${() => this.counterController.send({ type: 'TOGGLE' })}>
@@ -179,6 +214,7 @@ export class UseMachine<
   machine: TMachine;
   options?: ActorOptions<TMachine>;
   callback?: (snapshot: SnapshotFrom<TMachine>) => void;
+  onError?: (error: unknown) => void;
   actorRef?: Actor<TMachine>;
   subscription?: Subscription;
   currentSnapshot: SnapshotFrom<TMachine> | undefined;
@@ -186,15 +222,19 @@ export class UseMachine<
 
   /**
    * @param {THost} host - The host object.
-   * @param {{ machine: TMachine; options?: ActorOptions<TMachine>; callback?: (snapshot: SnapshotFrom<TMachine>) => void }} arg - The arguments for the constructor.
+   * @param {UseMachineOptions<TMachine>} arg - The arguments for the constructor.
    */
   constructor(
     host: THost,
-    { machine, options, callback }: UseMachineOptions<TMachine>,
+    { machine, options, callback, onError }: UseMachineOptions<TMachine>,
   ) {
     this.machine = machine;
     this.options = options;
     this.callback = callback;
+    this.onError = onError;
+    // The actor is created (not started) eagerly so `actor`, `snapshot` and `send`
+    // are available before the host is connected.
+    this.actorRef = createActor(this.machine, this.options);
     this.currentSnapshot = this.snapshot;
 
     (this.host = host).addController(this);
@@ -224,6 +264,7 @@ export class UseMachine<
 
   unsubscribe(): void {
     this.subscription?.unsubscribe();
+    this.subscription = undefined;
   }
 
   /**
@@ -238,14 +279,58 @@ export class UseMachine<
     }
   };
 
+  /**
+   * `true` while the current actor can be (or is being) run.
+   * A snapshot is `'active'` both before `start()` and while running; after `stop()`
+   * it is `'stopped'` (and `'done'` / `'error'` when it finishes or fails).
+   */
+  get isActive(): boolean {
+    const snapshot: Snapshot<unknown> | undefined =
+      this.actorRef?.getSnapshot();
+    return snapshot?.status === 'active';
+  }
+
+  /**
+   * Starts the actor. A new actor is created if the previous one is no longer active
+   * (e.g. stopped when the host was disconnected), because stopped actors cannot be restarted.
+   */
   startService(): void {
-    this.actorRef = createActor(this.machine, this.options);
-    this.subscription = this.actorRef?.subscribe(this.onNext);
-    this.actorRef?.start();
+    if (this.subscription) {
+      return;
+    }
+
+    if (!this.actorRef || !this.isActive) {
+      this.actorRef = createActor(this.machine, this.options);
+    }
+
+    const actorRef = this.actorRef;
+
+    // New session: always notify the first snapshot.
+    this.currentSnapshot = undefined;
+    this.subscription = actorRef.subscribe({
+      next: this.onNext,
+      // XState does not emit the `'error'` snapshot through `next`: forward it, so `callback`
+      // receives it and the host re-renders. Without `onError`, the error is still reported
+      // as unhandled (`reportError`).
+      error: (error: unknown) => {
+        this.onNext(actorRef.getSnapshot());
+
+        if (this.onError) {
+          this.onError(error);
+        } else {
+          reportUnhandledError(error);
+        }
+      },
+      // `stop()` (and final states) complete the observers without emitting a last
+      complete: () => this.onNext(actorRef.getSnapshot()),
+    });
+    actorRef.start();
+    this.onNext(actorRef.getSnapshot());
   }
 
   stopService(): void {
     this.actorRef?.stop();
+    this.unsubscribe();
   }
 
   hostConnected(): void {
