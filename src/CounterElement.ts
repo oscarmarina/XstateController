@@ -1,6 +1,6 @@
 import { html, LitElement } from 'lit';
 import { state } from 'lit/decorators.js';
-import { type InspectionEvent, type SnapshotFrom } from 'xstate';
+import { type EventFrom, type InspectionEvent, type SnapshotFrom } from 'xstate';
 import { counterMachine } from './counterMachine.js';
 import { UseMachine } from '../xstate-lit/src/index.js';
 import { styles } from './styles/counter-element-styles.css.js';
@@ -13,7 +13,7 @@ export class CounterElement extends LitElement {
   #inspectEventsHandler: (inspEvent: InspectionEvent) => void =
     this.#inspectEvents.bind(this);
 
-  #callbackHandler: (snapshot: SnapshotFrom<any>) => void =
+  #callbackHandler: (snapshot: CounterSnapshot) => void =
     this.#callbackCounterController.bind(this);
 
   counterController: UseMachine<typeof counterMachine> = new UseMachine(this, {
@@ -40,12 +40,8 @@ export class CounterElement extends LitElement {
     }
   }
 
-  #callbackCounterController(snapshot: typeof this.counterController.snapshot) {
-    if (snapshot?.status === 'stopped') {
-      this.xstate = {} as CounterSnapshot;
-    } else {
-      this.xstate = snapshot;
-    }
+  #callbackCounterController(snapshot: CounterSnapshot) {
+    this.xstate = snapshot.status === 'stopped' ? undefined : snapshot;
   }
 
   #inspectEvents(inspEvent: InspectionEvent) {
@@ -56,7 +52,12 @@ export class CounterElement extends LitElement {
     return this.counterController.snapshot?.matches('disabled');
   }
 
-  #send(event: any) {
+  // `false` when the event would be ignored (guards, `disabled` state) or the actor is stopped
+  #can(type: 'INC' | 'DEC') {
+    return this.counterController.snapshot?.can({ type }) ?? false;
+  }
+
+  #send(event: EventFrom<typeof counterMachine>) {
     this.counterController.send(event);
   }
 
@@ -65,14 +66,14 @@ export class CounterElement extends LitElement {
       <div aria-disabled="${this.#disabled}">
         <span>
           <button
-            ?disabled="${this.#disabled}"
+            ?disabled="${!this.#can('INC')}"
             data-counter="increment"
             @click=${() => this.#send({ type: 'INC' })}
           >
             Increment
           </button>
           <button
-            ?disabled="${this.#disabled}"
+            ?disabled="${!this.#can('DEC')}"
             data-counter="decrement"
             @click=${() => this.#send({ type: 'DEC' })}
           >

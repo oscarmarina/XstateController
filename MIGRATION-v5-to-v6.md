@@ -1,7 +1,9 @@
 # XState v5 → v6 Migration Guide
 
-> Compares XState v5 (`^5.32.5`, commit `c9bb982`) and v6 (`^6.0.0-alpha.59`, the version used for the migration examples).
-> The v6 examples reflect the repository implementation at the time of the migration; the v5 blocks are reconstructed reference versions.
+> This guide records the original migration from XState v5 (`^5.32.5`, commit `c9bb982`) to
+> v6 (`^6.0.0-alpha.59`). The v6 examples reflect the repository implementation at that time;
+> the v5 blocks are reconstructed reference versions. The package has since moved to
+> `xstate@^6.0.0-alpha.65`; see [Current implementation notes](#7-current-implementation-notes-alpha65).
 
 ---
 
@@ -306,7 +308,8 @@ property should be treated as optional.
 Starting with alpha.60, the inspection protocol changed: `InspectionEvent` uses
 `@xstate.transition` (which carries a snapshot) instead of a separate
 `@xstate.snapshot` event. This workaround is specific to alpha.59 and should
-not be carried forward unchanged.
+not be carried forward unchanged. For the alpha.65 event shape and the current
+repository status, see [Inspection events in alpha.65](#inspection-events-in-alpha65).
 
 ---
 
@@ -343,7 +346,10 @@ export class FeedbackElement extends LitElement {
 ```
 
 `@statelyai/inspect@0.7.2` requires `xstate@^5`, so it cannot be used with v6.
-Replace with the built-in `options.inspect` callback on the actor.
+The application code no longer imports or calls it and uses the built-in
+`options.inspect` callback instead. The root `package.json` still lists
+`@statelyai/inspect` as a dependency, so removing that unused dependency remains
+package cleanup rather than a completed part of the migration.
 
 ---
 
@@ -372,8 +378,66 @@ Replace with the built-in `options.inspect` callback on the actor.
 }
 ```
 
-- `xstate` bumped from `^5.32.5` to `^6.0.0-alpha.59`
-- `@statelyai/inspect` removed (incompatible with xstate v6)
+- At the time of migration, `xstate` was bumped from `^5.32.5` to `^6.0.0-alpha.59`
+- Application code stopped using `@statelyai/inspect` (incompatible with xstate v6); the dependency is still present in the current manifest.
+
+The dependency example above is the migration-time snapshot, not the current
+manifest. The current package uses `xstate@^6.0.0-alpha.65` and still lists the
+unused `@statelyai/inspect` dependency.
+
+---
+
+## 7. Current implementation notes (alpha.65)
+
+These changes happened after the original alpha.59 migration examples. They
+describe the current repository implementation and should not be read as
+differences that apply to every XState v6 release.
+
+### Inspection events in alpha.65
+
+The alpha.65 `InspectionEvent` union contains `@xstate.actor` and
+`@xstate.transition`. A transition event includes the resulting `snapshot`; an
+actor stop is reflected by `snapshot.status === 'stopped'`. There is no separate
+`@xstate.snapshot` inspection event in this protocol.
+
+```ts
+import type { InspectionEvent } from 'xstate';
+
+function inspect(event: InspectionEvent) {
+  if (
+    event.type === '@xstate.transition' &&
+    event.snapshot.status === 'stopped'
+  ) {
+    // Handle the actor stopping.
+  }
+}
+```
+
+`src/FeedbackElement.ts` still checks for `@xstate.snapshot` and types the
+handler as `any`; that handler has not yet been updated to the alpha.65 protocol.
+`src/CounterElement.ts` already uses the `InspectionEvent` type.
+
+### Required actor input in `UseMachine`
+
+Alpha.65 exports `RequiredActorOptionsKeys` and `RequiredActorOptionsFor` to
+express when actor creation needs `{ input }` (or a persisted `{ snapshot }`).
+`xstate-lit/src/UseMachine.ts` applies those types to the controller constructor
+options and its `options` property. This makes a missing required input a
+compile-time error, including when the controller creates a fresh actor after
+the host reconnects.
+
+The private `#createActor()` method contains one type assertion because
+TypeScript cannot resolve `createActor`'s conditional options signature while
+`TMachine` is generic. The constructor and property types enforce the required
+options before that internal call.
+
+### `snapshot.can()` in the UI
+
+The counter and feedback components use `snapshot.can(event)` to disable controls
+when the current snapshot cannot handle an event. For the counter, this disables
+decrement at zero, increment at ten, and both controls in the disabled state.
+This is a UI convenience; the machine's transition logic remains responsible
+for ignoring invalid events.
 
 ---
 
@@ -386,7 +450,7 @@ Replace with the built-in `options.inspect` callback on the actor.
 | **Guards** | `{ guard: 'name' }` or `{ guard: { type } }` in config | Inline `guards.xxx({ context })` inside transition functions |
 | **Transition actions** | `{ actions: { type } }` in config | Function transitions returning `{ context }` or `{ target, context }` |
 | **`getSnapshot`** | `actorRef?.getSnapshot?.()` | `actorRef?.getSnapshot()` |
-| **`InspectionEvent`** | Exported from `xstate` | Still exported; extend locally for `@xstate.snapshot` |
+| **`InspectionEvent`** | Exported from `xstate` | The original alpha.59 example extends it for `@xstate.snapshot`; alpha.60+ uses `@xstate.transition` with a snapshot |
 | **`@statelyai/inspect`** | Compatible | Incompatible (requires xstate v5) |
 | **`FeedbackElement`** | Constructor-assigned controller | Field-initialized controller with callback |
 | **TypeScript** | `setup({ types: { context: {} as C, events: {} as E } })` | `setup({ schemas: { context: types<C>(), events: { NAME: types<Payload>() } } })` (Standard Schema) |

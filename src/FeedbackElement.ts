@@ -1,9 +1,12 @@
 import { html, LitElement } from 'lit';
 import { state } from 'lit/decorators.js';
+import { type EventFrom, type SnapshotFrom } from 'xstate';
 // import { createBrowserInspector } from '@statelyai/inspect';
 import { feedbackMachine } from './feedbackMachine.js';
 import { UseMachine } from '../xstate-lit/src/index.js';
 import { styles } from './styles/feedback-element-styles.css.js';
+
+type FeedbackSnapshot = SnapshotFrom<typeof feedbackMachine>;
 
 /* const { inspect } = createBrowserInspector({
   autoStart: false
@@ -15,7 +18,7 @@ export class FeedbackElement extends LitElement {
   #inspectEventsHandler: (inspEvent: any) => void =
     this.#inspectEvents.bind(this);
 
-  #callbackHandler: (snapshot: any) => void =
+  #callbackHandler: (snapshot: FeedbackSnapshot) => void =
     this.#callbackFeedbackController.bind(this);
 
   feedbackController: UseMachine<typeof feedbackMachine> = new UseMachine(
@@ -37,9 +40,7 @@ export class FeedbackElement extends LitElement {
     return this.feedbackController.snapshot?.matches(match);
   }
 
-  #callbackFeedbackController(
-    snapshot: typeof this.feedbackController.snapshot,
-  ) {
+  #callbackFeedbackController(snapshot: FeedbackSnapshot) {
     this.xstate = snapshot;
   }
 
@@ -52,7 +53,7 @@ export class FeedbackElement extends LitElement {
     }
   }
 
-  #send(ev: any) {
+  #send(ev: EventFrom<typeof feedbackMachine>) {
     this.feedbackController.send(ev);
   }
 
@@ -144,6 +145,7 @@ export class FeedbackElement extends LitElement {
           name="feedback"
           rows="4"
           placeholder="So many things..."
+          .value=${this.feedbackController.snapshot?.context.feedback ?? ''}
           @input=${({ target }: { target: HTMLTextAreaElement }) =>
             this.#send({
               type: 'feedback.update',
@@ -156,12 +158,15 @@ export class FeedbackElement extends LitElement {
           ?disabled=${!this.feedbackController.snapshot?.can({
             type: 'submit',
           })}
-          @click=${() => this.#send({ type: 'submit' })}
         >
           Submit
         </button>
 
-        <button class="button" @click=${() => this.#send({ type: 'back' })}>
+        <button
+          type="button"
+          class="button"
+          @click=${() => this.#send({ type: 'back' })}
+        >
           Back
         </button>
       </form>

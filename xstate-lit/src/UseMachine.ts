@@ -4,15 +4,26 @@ import type {
   ActorOptions,
   AnyStateMachine,
   EventFrom,
+  RequiredActorOptionsFor,
+  RequiredActorOptionsKeys,
   Snapshot,
   SnapshotFrom,
   Subscription,
 } from 'xstate';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 
-export interface UseMachineOptions<TMachine extends AnyStateMachine> {
+/**
+ * `createActor` options for `TMachine`: required (`{input}` or `{snapshot}`) when the machine's
+ * input does not accept `undefined`, as in `createActor`.
+ */
+type ControllerActorOptions<TMachine extends AnyStateMachine> = [
+  RequiredActorOptionsKeys<TMachine>,
+] extends [never]
+  ? { options?: ActorOptions<TMachine> }
+  : { options: ActorOptions<TMachine> & RequiredActorOptionsFor<TMachine> };
+
+export type UseMachineOptions<TMachine extends AnyStateMachine> = {
   machine: TMachine;
-  options?: ActorOptions<TMachine>;
   /** Called with every new snapshot emitted by the actor. */
   callback?: (snapshot: SnapshotFrom<TMachine>) => void;
   /**
@@ -20,7 +31,7 @@ export interface UseMachineOptions<TMachine extends AnyStateMachine> {
    * If omitted, the error is reported as unhandled (`reportError`).
    */
   onError?: (error: unknown) => void;
-}
+} & ControllerActorOptions<TMachine>;
 
 const reportUnhandledError = (error: unknown): void => {
   if (typeof globalThis.reportError === 'function') {
@@ -38,7 +49,7 @@ const reportUnhandledError = (error: unknown): void => {
  * ![Lit](https://img.shields.io/badge/lit-3.0.0-blue.svg)
  *
  * ### Connect XState machines with Lit
- * The UseMachine is a Lit Reactive Controller that is specifically designed to facilitate a integration with XState. This controller provides the capability to subscribe to an XState actor. It also provides a callback function to handle the state changes.
+ * The UseMachine is a Lit Reactive Controller that is specifically designed to facilitate an integration with XState. This controller provides the capability to subscribe to an XState actor. It also provides a callback function to handle the state changes.
  *
  * - [xstate v6](https://stately.ai/docs/installation)
  * - [xstate v6 - examples](https://stately.ai/docs/examples)
@@ -106,14 +117,34 @@ const reportUnhandledError = (error: unknown): void => {
  * });
  * ```
  *
- * **`new UseMachine(this, {machine, options?, callback?, onError?})`**
+ * **`new UseMachine(this, {machine, options, callback, onError})`**
  *
- * - `machine`: the XState machine.
- * - `options`: `createActor` options (`input`, `inspect`, ...).
- * - `callback`: called with every new snapshot: the first one on each connection and the last one
- * (`snapshot.status === 'stopped'`) when the host is disconnected.
- * - `onError`: called when the actor errors (the `'error'` snapshot is also sent to `callback`).
- *   If omitted, the error is reported as unhandled (`reportError`).
+ * - `this`: the host component (a Lit `ReactiveControllerHost`, usually the `LitElement` itself).
+ * - `machine` (required): the XState machine.
+ * - `options`: `createActor` options (`input`, `inspect`, ...). Optional, unless the machine requires
+ *   input: then `{input}` or `{snapshot}` must be provided, as when calling `createActor`.
+ * - `callback` (optional): called with every new snapshot: the first one on each connection and the
+ *   last one (`snapshot.status === 'stopped'`) when the host is disconnected.
+ * - `onError` (optional): called when the actor errors (the `'error'` snapshot is also sent to
+ *   `callback`). If omitted, the error is reported as unhandled (`reportError`).
+ *
+ * ***Machine with required input***
+ *
+ * ```ts
+ * const userMachine = setup({
+ *   schemas: {
+ *     input: types<{ userId: string }>(),
+ *     context: types<{ userId: string }>(),
+ *   },
+ * }).createMachine({
+ *   context: ({ input }) => ({ userId: input.userId }),
+ * });
+ *
+ * new UseMachine(this, { machine: userMachine }); // type error: `input` is required
+ * new UseMachine(this, { machine: userMachine, options: { input: { userId: '123' } } });
+ * ```
+ *
+ * Machines whose input accepts `undefined` (or that declare no input) can omit `options`.
  *
  * The actor is created in the constructor, so `snapshot`, `actor` and `send` are available
  * before the host is connected. It is started on `hostConnected` and stopped on `hostDisconnected`;
@@ -153,7 +184,7 @@ const reportUnhandledError = (error: unknown): void => {
  *     this._xstate = snapshot;
  *   };
  *
- *   // xstate v6 inspection events: '@xstate.actor' | '@xstate.transition' | '@xstate.deadletter'
+ *   // xstate v6 inspection events: '@xstate.actor' | '@xstate.transition'
  *   _inspectEvents = (inspEvent) => {
  *     if (inspEvent.type === '@xstate.transition' && inspEvent.snapshot.status === 'stopped') {
  *       this._xstate = {};
@@ -176,19 +207,24 @@ const reportUnhandledError = (error: unknown): void => {
  *     return this.counterController.snapshot?.matches('disabled');
  *   }
  *
+ *   // `false` when the event would be ignored (guards, `disabled` state) or the actor is stopped
+ *   #can(type) {
+ *     return this.counterController.snapshot?.can({ type }) ?? false;
+ *   }
+ *
  *   render() {
  *     return html`
  *       <slot></slot>
  *       <div data-disabled="${this.#disabled}">
  *         <span>
  *           <button
- *             ?disabled="${this.#disabled}"
+ *             ?disabled="${!this.#can('INC')}"
  *             data-counter="increment"
  *             \@click=${() => this.counterController.send({ type: 'INC' })}>
  *             Increment
  *           </button>
  *           <button
- *             ?disabled="${this.#disabled}"
+ *             ?disabled="${!this.#can('DEC')}"
  *             data-counter="decrement"
  *             \@click=${() => this.counterController.send({ type: 'DEC' })}>
  *             Decrement
@@ -212,7 +248,11 @@ export class UseMachine<
   THost extends ReactiveControllerHost = ReactiveControllerHost,
 > implements ReactiveController {
   machine: TMachine;
-  options?: ActorOptions<TMachine>;
+  /**
+   * `createActor` options. Typed like the constructor argument, so it cannot be reassigned
+   * without `input` when the machine requires it (a new actor is created on reconnect).
+   */
+  options: ControllerActorOptions<TMachine>['options'];
   callback?: (snapshot: SnapshotFrom<TMachine>) => void;
   onError?: (error: unknown) => void;
   actorRef?: Actor<TMachine>;
@@ -234,10 +274,22 @@ export class UseMachine<
     this.onError = onError;
     // The actor is created (not started) eagerly so `actor`, `snapshot` and `send`
     // are available before the host is connected.
-    this.actorRef = createActor(this.machine, this.options);
+    this.actorRef = this.#createActor();
     this.currentSnapshot = this.snapshot;
 
     (this.host = host).addController(this);
+  }
+
+  #createActor(): Actor<TMachine> {
+    // `TMachine` is generic here, so TypeScript cannot resolve `createActor`'s conditional
+    // options (required `input`). The check is enforced where `options` is set instead: the
+    // constructor argument (`UseMachineOptions`) and the `options` property share that condition.
+    return (
+      createActor as (
+        logic: TMachine,
+        options?: ActorOptions<TMachine>,
+      ) => Actor<TMachine>
+    )(this.machine, this.options);
   }
 
   /**
@@ -300,7 +352,7 @@ export class UseMachine<
     }
 
     if (!this.actorRef || !this.isActive) {
-      this.actorRef = createActor(this.machine, this.options);
+      this.actorRef = this.#createActor();
     }
 
     const actorRef = this.actorRef;

@@ -132,11 +132,20 @@ export class CounterElement extends LitElement {
     this.counterController.send(event);
   }
 
+  // `false` when the event would be ignored (guards, `disabled` state) or the actor is stopped
+  #can(type: 'INC' | 'DEC') {
+    return this.counterController.snapshot?.can({ type }) ?? false;
+  }
+
   override render() {
     return html`
       <span>Count: ${this.counterController.snapshot?.context.counter}</span>
-      <button @click=${() => this.#send({ type: 'INC' })}>+</button>
-      <button @click=${() => this.#send({ type: 'DEC' })}>-</button>
+      <button ?disabled=${!this.#can('INC')} @click=${() => this.#send({ type: 'INC' })}>
+        +
+      </button>
+      <button ?disabled=${!this.#can('DEC')} @click=${() => this.#send({ type: 'DEC' })}>
+        -
+      </button>
       <button @click=${() => this.#send({ type: 'TOGGLE' })}>
         ${this.counterController.snapshot?.matches('enabled') ? 'Disable' : 'Enable'}
       </button>
@@ -144,3 +153,38 @@ export class CounterElement extends LitElement {
   }
 }
 ```
+
+`snapshot.can(event)` returns `false` when the transition function ignores the event (returns
+`undefined`), so `+` is disabled at 10, `-` at 0, and both in the `disabled` state. The machine
+still rejects invalid events: `can()` only drives the UI.
+
+### Options and required input
+
+`options` are the `createActor` options (`input`, `inspect`, `snapshot`, ...). As in
+`createActor`, they are required when the machine's input does not accept `undefined`:
+
+```ts
+import { setup, types } from 'xstate';
+
+const userMachine = setup({
+  schemas: {
+    input: types<{ userId: string }>(),
+    context: types<{ userId: string }>(),
+  },
+}).createMachine({
+  context: ({ input }) => ({ userId: input.userId }),
+});
+
+// Type error: `options.input` is required
+new UseMachine(this, { machine: userMachine });
+
+// OK
+new UseMachine(this, {
+  machine: userMachine,
+  options: { input: { userId: '123' } },
+});
+```
+
+Machines whose input accepts `undefined` (or that declare no input) can omit `options`.
+The `options` property of the controller has the same type, so it cannot be reassigned without
+`input`: a new actor is created with it each time the host is connected again.
