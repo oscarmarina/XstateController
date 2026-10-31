@@ -13,6 +13,10 @@ const feedbackSetup = setup({
       back: types<void>(),
       restart: types<void>(),
     },
+    // The element's public events: `UseMachine` dispatches them on the host (`dispatchEmitted`)
+    emitted: {
+      feedbacksubmit: types<{ rating: 'good' | 'bad'; feedback: string }>(),
+    },
   },
   guards: {
     feedbackValid: ({ context }) => context.feedback.length > 0,
@@ -26,7 +30,10 @@ export const feedbackMachine = feedbackSetup.createMachine({
   states: {
     prompt: {
       on: {
-        'feedback.good': { target: 'thanks' },
+        'feedback.good': (_, enq) => {
+          enq.emit({ type: 'feedbacksubmit', rating: 'good', feedback: '' });
+          return { target: 'thanks' };
+        },
         'feedback.bad': { target: 'form' },
       },
     },
@@ -36,8 +43,15 @@ export const feedbackMachine = feedbackSetup.createMachine({
           context: { feedback: event.value },
         }),
         back: { target: 'prompt' },
-        submit: ({ context, guards }) =>
-          guards.feedbackValid({ context }) ? { target: 'thanks' } : undefined,
+        // The guard comes first: a function that calls `enq` handles the event even when it
+        // returns nothing
+        submit: ({ context, guards }, enq) => {
+          if (!guards.feedbackValid({ context })) {
+            return undefined;
+          }
+          enq.emit({ type: 'feedbacksubmit', rating: 'bad', feedback: context.feedback });
+          return { target: 'thanks' };
+        },
       },
     },
     thanks: {},

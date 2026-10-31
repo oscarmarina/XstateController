@@ -95,6 +95,16 @@ export const styles = css`
     margin: 0;
   }
 
+  .countdown {
+    position: absolute;
+    top: 50%;
+    right: 1.5rem;
+    bottom: auto;
+    transform: translateY(-50%);
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+  }
+
   span {
     display: flex;
     flex-direction: column;

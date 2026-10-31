@@ -1,4 +1,5 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
+import { playwright } from '@vitest/browser-playwright';
 import { globSync } from 'tinyglobby';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 
@@ -47,6 +48,48 @@ const entries = (() => {
 // https://github.com/vitest-dev/vitest/commit/78b62ffe#diff-d3e264f3679867e205ed7eeb7622aa3b62bb0c4b1a4aa5a5983cb3aa118fcf3c
 
 export default defineConfig(({ command }) => ({
+  test: {
+    onConsoleLog(log, type) {
+      if (type === 'stderr' && log.includes('in dev mode')) {
+        return false;
+      }
+    },
+    include: ['test/**/*.{test,spec}.?(c|m)[jt]s?(x)'],
+    browser: {
+      enabled: true,
+      headless: true,
+      trace: 'off',
+      provider: playwright(),
+      screenshotFailures: false,
+      instances: [
+        {
+          browser: 'chromium',
+          provider: playwright({
+            launchOptions: {
+              args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu'],
+            },
+          }),
+        },
+        {
+          browser: 'webkit',
+        },
+      ],
+    },
+    coverage: {
+      provider: 'istanbul',
+      reportsDirectory: 'test/coverage/',
+      reporter: ['lcov', 'json', 'text-summary'],
+      enabled: true,
+      thresholds: {
+        statements: 80,
+        branches: 80,
+        functions: 80,
+        lines: 80,
+      },
+      include: ['**/src/**/*.{js,ts}'],
+      exclude: ['**/src/**/index.*', '**/src/styles/', '**/src/define/'],
+    },
+  },
   plugins: command === 'build' ? [viteStaticCopy(copyConfig)] : [],
   optimizeDeps: {
     exclude: ['lit', 'lit-html'],

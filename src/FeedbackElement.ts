@@ -1,12 +1,8 @@
 import { html, LitElement } from 'lit';
-import { state } from 'lit/decorators.js';
-import { type EventFrom, type SnapshotFrom } from 'xstate';
 // import { createBrowserInspector } from '@statelyai/inspect';
 import { feedbackMachine } from './feedbackMachine.js';
-import { UseMachine } from '../xstate-lit/src/index.js';
+import { UseMachine, type EmittedEventMap } from '../xstate-lit/src/index.js';
 import { styles } from './styles/feedback-element-styles.css.js';
-
-type FeedbackSnapshot = SnapshotFrom<typeof feedbackMachine>;
 
 /* const { inspect } = createBrowserInspector({
   autoStart: false
@@ -15,51 +11,24 @@ type FeedbackSnapshot = SnapshotFrom<typeof feedbackMachine>;
 export class FeedbackElement extends LitElement {
   static override styles = [styles];
 
-  #inspectEventsHandler: (inspEvent: any) => void =
-    this.#inspectEvents.bind(this);
-
-  #callbackHandler: (snapshot: FeedbackSnapshot) => void =
-    this.#callbackFeedbackController.bind(this);
-
+  // The controller re-renders the host on every snapshot: no `@state` mirror is needed.
+  // The machine emits `feedbacksubmit`, dispatched on the element (`dispatchEmitted`).
   feedbackController: UseMachine<typeof feedbackMachine> = new UseMachine(
     this,
-    {
-      machine: feedbackMachine,
-      options: {
-        inspect: this.#inspectEventsHandler,
-      },
-      callback: this.#callbackHandler,
-    },
+    // Moving the element in the DOM keeps the current step and the comment being written
+    { machine: feedbackMachine, reconnect: 'restore', dispatchEmitted: true },
   );
 
-  @state()
-  xstate: typeof this.feedbackController.snapshot =
-    this.feedbackController.snapshot;
-
-  #getMatches(match: 'prompt' | 'thanks' | 'form' | 'closed') {
-    return this.feedbackController.snapshot?.matches(match);
+  get #snapshot() {
+    return this.feedbackController.snapshot;
   }
 
-  #callbackFeedbackController(snapshot: FeedbackSnapshot) {
-    this.xstate = snapshot;
-  }
-
-  #inspectEvents(inspEvent: any) {
-    if (
-      inspEvent.type === '@xstate.snapshot' &&
-      inspEvent.event?.type === 'xstate.stop'
-    ) {
-      this.xstate = {} as unknown as typeof this.feedbackController.snapshot;
-    }
-  }
-
-  #send(ev: EventFrom<typeof feedbackMachine>) {
-    this.feedbackController.send(ev);
-  }
+  // A stable proxy: it can be kept, it always sends to the current actor
+  #trigger = this.feedbackController.trigger;
 
   override render() {
     return html`
-      ${this.#getMatches('closed') ? this._closedTpl : this._feedbackTpl}
+      ${this.#snapshot.matches('closed') ? this._closedTpl : this._feedbackTpl}
     `;
   }
 
@@ -67,9 +36,9 @@ export class FeedbackElement extends LitElement {
     return html`
       <div class="feedback">
         ${this._closeFeedbackTpl}
-        ${this.#getMatches('prompt') ? this._promptTpl : ''}
-        ${this.#getMatches('thanks') ? this._thanksTpl : ''}
-        ${this.#getMatches('form') ? this._formTpl : ''}
+        ${this.#snapshot.matches('prompt') ? this._promptTpl : ''}
+        ${this.#snapshot.matches('thanks') ? this._thanksTpl : ''}
+        ${this.#snapshot.matches('form') ? this._formTpl : ''}
       </div>
       ${this._slotTpl}
     `;
@@ -84,7 +53,7 @@ export class FeedbackElement extends LitElement {
       <div class="close-feedback">
         <button
           class="close-button"
-          @click=${() => this.#send({ type: 'close' })}
+          @click=${() => this.#trigger.close()}
         >
           Close
         </button>
@@ -99,14 +68,14 @@ export class FeedbackElement extends LitElement {
 
         <button
           class="button"
-          @click=${() => this.#send({ type: 'feedback.good' })}
+          @click=${() => this.#trigger['feedback.good']()}
         >
           Good
         </button>
 
         <button
           class="button"
-          @click=${() => this.#send({ type: 'feedback.bad' })}
+          @click=${() => this.#trigger['feedback.bad']()}
         >
           Bad
         </button>
@@ -120,10 +89,8 @@ export class FeedbackElement extends LitElement {
         <h2>Thanks for your feedback.</h2>
 
         ${
-          this.feedbackController.snapshot?.context.feedback
-            ? html`<p>
-                "${this.feedbackController.snapshot?.context.feedback}"
-              </p>`
+          this.#snapshot.context.feedback
+            ? html`<p>"${this.#snapshot.context.feedback}"</p>`
             : ''
         }
       </div>
@@ -136,7 +103,7 @@ export class FeedbackElement extends LitElement {
         class="step"
         @submit=${(ev: Event) => {
           ev.preventDefault();
-          this.#send({ type: 'submit' });
+          this.#trigger.submit();
         }}
       >
         <h2>What can we do better?</h2>
@@ -145,19 +112,16 @@ export class FeedbackElement extends LitElement {
           name="feedback"
           rows="4"
           placeholder="So many things..."
-          .value=${this.feedbackController.snapshot?.context.feedback ?? ''}
-          @input=${({ target }: { target: HTMLTextAreaElement }) =>
-            this.#send({
-              type: 'feedback.update',
-              value: target.value,
+          .value=${this.#snapshot.context.feedback}
+          @input=${(ev: InputEvent) =>
+            this.#trigger['feedback.update']({
+              value: (ev.target as HTMLTextAreaElement).value,
             })}
         ></textarea>
 
         <button
           class="button"
-          ?disabled=${!this.feedbackController.snapshot?.can({
-            type: 'submit',
-          })}
+          ?disabled=${!this.feedbackController.can.submit()}
         >
           Submit
         </button>
@@ -165,7 +129,7 @@ export class FeedbackElement extends LitElement {
         <button
           type="button"
           class="button"
-          @click=${() => this.#send({ type: 'back' })}
+          @click=${() => this.#trigger.back()}
         >
           Back
         </button>
@@ -177,7 +141,7 @@ export class FeedbackElement extends LitElement {
     return html`
       <div>
         <em>Feedback form closed.</em>
-        <button class="button" @click=${() => this.#send({ type: 'restart' })}>
+        <button class="button" @click=${() => this.#trigger.restart()}>
           Provide more feedback
         </button>
       </div>
@@ -189,4 +153,6 @@ declare global {
   interface HTMLElementTagNameMap {
     'feedback-element': FeedbackElement;
   }
+  // `addEventListener('feedbacksubmit', (ev) => ev.detail.rating)` is typed
+  interface HTMLElementEventMap extends EmittedEventMap<typeof feedbackMachine> {}
 }
