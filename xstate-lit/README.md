@@ -167,7 +167,7 @@ decides what it starts from:
 
 | `reconnect` | The new actor starts from |
 | --- | --- |
-| `'restart'` (default) | the initial state, or `options.snapshot` |
+| `'restart'` (default) | the initial state |
 | `'restore'` | the state the previous actor had: its persisted snapshot |
 
 ```ts
@@ -175,7 +175,8 @@ counter = new UseMachine(this, { machine: counterMachine, reconnect: 'restore' }
 ```
 
 With `'restore'`, the snapshot is persisted before the actor stops (`actor.getPersistedSnapshot()`)
-and the new actor is created from it (`createActor(machine, { snapshot })`). It keeps:
+and the new actor is created from it with `restoreActor(machine, snapshot)` from `xstate/persist`
+(the `createActor` options are reused, except `input`: a restored actor resumes). It keeps:
 
 - `context`, the state value and children.
 - Pending timers, with their original deadlines: a `disabled` state with `after: { 3000: ... }`
@@ -327,8 +328,8 @@ With `'restore'` the new actor runs it again; with `'restart'` it is gone with t
 
 ### Options and required input
 
-`options` are the `createActor` options (`input`, `inspect`, `snapshot`, ...). As in
-`createActor`, they are required when the machine's input does not accept `undefined`:
+`options` are the `createActor` options (`input`, `inspect`, ...). As in `createActor`, they
+are required when the machine's input does not accept `undefined`:
 
 ```ts
 import { setup, types } from 'xstate';

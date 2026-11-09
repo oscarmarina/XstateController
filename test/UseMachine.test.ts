@@ -346,6 +346,37 @@ describe('UseMachine', () => {
       expect(controller.snapshot.value).toBe('ready');
     });
 
+    it('restores with the `createActor` options, except `input`', () => {
+      const inputMachine = setup({
+        schemas: {
+          input: types<{ id: string }>(),
+          context: types<{ id: string; renamed: boolean }>(),
+          events: { RENAME: types<void>() },
+        },
+      }).createMachine({
+        context: ({ input }) => ({ id: input.id, renamed: false }),
+        on: { RENAME: () => ({ context: { renamed: true } }) },
+      });
+      const inspect = vi.fn();
+      const host = createHost();
+      const controller = new UseMachine(host, {
+        machine: inputMachine,
+        reconnect: 'restore',
+        options: { input: { id: 'a' }, inspect },
+      });
+
+      host.connect();
+      controller.trigger.RENAME();
+      host.disconnect();
+      controller.options = { input: { id: 'b' }, inspect };
+      inspect.mockClear();
+      host.connect();
+
+      // Resumed, not initialized again from the new `input`
+      expect(controller.snapshot.context).toEqual({ id: 'a', renamed: true });
+      expect(inspect).toHaveBeenCalled();
+    });
+
     it('restarts an actor that had finished with an error', () => {
       const host = createHost();
       const controller = new UseMachine(host, {

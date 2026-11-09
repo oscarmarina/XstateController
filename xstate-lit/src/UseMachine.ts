@@ -1,4 +1,6 @@
 import { createActor } from 'xstate';
+import { restoreActor } from 'xstate/persist';
+import type { RestoreActorOptions } from 'xstate/persist';
 import type {
   Actor,
   ActorOptions,
@@ -16,8 +18,8 @@ import type {
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 
 /**
- * `createActor` options for `TMachine`: required (`{input}` or `{snapshot}`) when the machine's
- * input does not accept `undefined`, as in `createActor`.
+ * `createActor` options for `TMachine`: required (`{input}`) when the machine's input does not
+ * accept `undefined`, as in `createActor`.
  */
 type ControllerActorOptions<TMachine extends AnyStateMachine> = [
   RequiredActorOptionsKeys<TMachine>,
@@ -88,9 +90,10 @@ export type UseMachineOptions<TMachine extends AnyStateMachine> = {
   /**
    * What the new actor starts from when the host is connected again (a stopped actor cannot
    * restart, so a new one is always created):
-   * - `'restart'` (default): the initial state, or `options.snapshot`.
+   * - `'restart'` (default): the initial state.
    * - `'restore'`: the state the actor had when the host was disconnected, from its persisted
-   *   snapshot (context, state value, children and pending timers, which keep their deadlines).
+   *   snapshot (context, state value, children and pending timers, which keep their deadlines),
+   *   with `restoreActor` from `xstate/persist`.
    *   An actor that had finished (`'done'` or `'error'`) restarts.
    */
   reconnect?: 'restart' | 'restore';
@@ -198,8 +201,8 @@ export type UseMachineOptions<TMachine extends AnyStateMachine> = {
  *
  * - `this`: the host component (a Lit `ReactiveControllerHost`, usually the `LitElement` itself).
  * - `machine` (required): the XState machine.
- * - `options`: `createActor` options (`input`, `inspect`, ...). Optional, unless the machine requires
- *   input: then `{input}` or `{snapshot}` must be provided, as when calling `createActor`.
+ * - `options`: `createActor` options (`input`, `inspect`, ...). Optional, unless the machine
+ *   requires input: then `{input}` must be provided, as when calling `createActor`.
  * - `onSnapshot` (optional): called with every new snapshot: the first one on each connection
  *   and the last one (`snapshot.status === 'stopped'`) when the host is disconnected.
  * - `onError` (optional): called when the actor errors (the `'error'` snapshot is also sent to
@@ -415,12 +418,22 @@ export class UseMachine<
   /** Persisted on disconnect with `reconnect: 'restore'`, with the machine it belongs to. */
   #persisted?: {
     machine: TMachine;
-    snapshot: ActorOptions<TMachine>['snapshot'];
+    snapshot: Snapshot<unknown>;
   };
 
-  #createActor(
-    snapshot?: ActorOptions<TMachine>['snapshot'],
-  ): Actor<TMachine> {
+  /** A fresh actor, or one restored from `persisted` (`restoreActor` from `xstate/persist`). */
+  #createActor(persisted?: Snapshot<unknown>): Actor<TMachine> {
+    if (persisted) {
+      // A restored actor resumes: `input` only initializes a fresh one
+      const { input: _input, ...options } = this.options ?? {};
+      return (
+        restoreActor as (
+          logic: TMachine,
+          snapshot: Snapshot<unknown>,
+          options?: RestoreActorOptions<TMachine>,
+        ) => Actor<TMachine>
+      )(this.machine, persisted, options);
+    }
     // `TMachine` is generic here, so TypeScript cannot resolve `createActor`'s conditional
     // options (required `input`). The check is enforced where `options` is set instead: the
     // constructor argument (`UseMachineOptions`) and the `options` property share that condition.
@@ -429,14 +442,14 @@ export class UseMachine<
         logic: TMachine,
         options?: ActorOptions<TMachine>,
       ) => Actor<TMachine>
-    )(this.machine, snapshot ? { ...this.options, snapshot } : this.options);
+    )(this.machine, this.options);
   }
 
   /**
    * The snapshot to restore on reconnect: only with `reconnect: 'restore'`, and only for the
    * machine it was persisted from (`machine` may have been reassigned meanwhile).
    */
-  #takePersisted(): ActorOptions<TMachine>['snapshot'] {
+  #takePersisted(): Snapshot<unknown> | undefined {
     const persisted = this.#persisted;
     this.#persisted = undefined;
     return this.reconnect === 'restore' && persisted?.machine === this.machine
@@ -560,7 +573,7 @@ export class UseMachine<
       this.reconnect === 'restore' && this.isActive
         ? {
             machine: this.machine,
-            snapshot: this.actorRef.getPersistedSnapshot() as ActorOptions<TMachine>['snapshot'],
+            snapshot: this.actorRef.getPersistedSnapshot(),
           }
         : undefined;
     this.actorRef.stop();
