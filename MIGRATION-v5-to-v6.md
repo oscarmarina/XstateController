@@ -3,7 +3,7 @@
 > This guide records the original migration from XState v5 (`^5.32.5`, commit `c9bb982`) to
 > v6 (`^6.0.0-alpha.59`). The v6 examples reflect the repository implementation at that time;
 > the v5 blocks are reconstructed reference versions. The package has since moved to
-> `xstate@^6.0.0-alpha.65`; see [Current implementation notes](#7-current-implementation-notes-alpha65).
+> `xstate@^6.0.0-beta.2`; see [Current implementation notes](#7-current-implementation-notes).
 
 ---
 
@@ -347,9 +347,8 @@ export class FeedbackElement extends LitElement {
 
 `@statelyai/inspect@0.7.2` requires `xstate@^5`, so it cannot be used with v6.
 The application code no longer imports or calls it and uses the built-in
-`options.inspect` callback instead. The root `package.json` still lists
-`@statelyai/inspect` as a dependency, so removing that unused dependency remains
-package cleanup rather than a completed part of the migration.
+`options.inspect` callback instead. The unused `@statelyai/inspect` dependency
+has since been removed from `package.json`.
 
 ---
 
@@ -379,18 +378,18 @@ package cleanup rather than a completed part of the migration.
 ```
 
 - At the time of migration, `xstate` was bumped from `^5.32.5` to `^6.0.0-alpha.59`
-- Application code stopped using `@statelyai/inspect` (incompatible with xstate v6); the dependency is still present in the current manifest.
+- Application code stopped using `@statelyai/inspect` (incompatible with xstate v6); the dependency has since been removed from the manifest.
 
 The dependency example above is the migration-time snapshot, not the current
-manifest. The current package uses `xstate@^6.0.0-alpha.65` and still lists the
-unused `@statelyai/inspect` dependency.
+manifest. The current package uses `xstate@^6.0.0-beta.2` and no longer lists
+`@statelyai/inspect`.
 
 ---
 
-## 7. Current implementation notes (alpha.65)
+## 7. Current implementation notes
 
-These changes happened after the original alpha.59 migration examples. They
-describe the current repository implementation and should not be read as
+These changes happened after the original alpha.59 migration examples (alpha.65 through
+beta.2). They describe the current repository implementation and should not be read as
 differences that apply to every XState v6 release.
 
 ### Inspection events in alpha.65
@@ -413,9 +412,33 @@ function inspect(event: InspectionEvent) {
 }
 ```
 
-`src/FeedbackElement.ts` still checks for `@xstate.snapshot` and types the
-handler as `any`; that handler has not yet been updated to the alpha.65 protocol.
-`src/CounterElement.ts` already uses the `InspectionEvent` type.
+`src/CounterElement.ts` uses the `InspectionEvent` type. `src/FeedbackElement.ts`
+no longer carries inspector code.
+
+### Changes in 6.0.0-beta.2
+
+The repository now uses `xstate@^6.0.0-beta.2`. The alpha.65 notes in this
+section still apply. The release notes
+(<https://github.com/statelyai/xstate/releases/tag/xstate%406.0.0-beta.2>)
+contain one breaking change that affects persisted data:
+
+- Serialized output no longer uses field names starting with `$` or `_`:
+  `{ $actor }` → `{ '@actor' }`, `_nextTimerId` → `nextTimerId`,
+  `_nextActorIds` → `nextActorIds`, `_stateInputs` → `stateInputs`,
+  `$error` → `@error`, `$stateNode` → `@stateNode`, `$systemMapper` → `@systemMapper`.
+- Snapshots written by beta.1 still restore (`restoreActor`,
+  `restoreMachineSnapshot` and `systemTransition` read both shapes); new
+  snapshots use only the new names. Any schema that validates persisted
+  snapshots must use the new names.
+
+Impact here: `UseMachine` with `reconnect: 'restore'` treats the snapshot from
+`getPersistedSnapshot()` as opaque and passes it to `restoreActor`, so no code
+changes were needed. Only snapshots you store outside the element (for example
+in a database) and validate by shape are affected.
+
+Other changes in the release (`createFSM` fixes, inline-invoke `onDone.event.output`
+typed as `unknown` without registered actors, `durable.checkpoint()`, inspector
+`sent[]` memory fix) do not touch APIs used by this repository.
 
 ### Required actor input in `UseMachine`
 

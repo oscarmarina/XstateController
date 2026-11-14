@@ -1,12 +1,7 @@
 import { html, LitElement } from 'lit';
-// import { createBrowserInspector } from '@statelyai/inspect';
 import { feedbackMachine } from './feedbackMachine.js';
 import { UseMachine, type EmittedEventMap } from '../xstate-lit/src/index.js';
 import { styles } from './styles/feedback-element-styles.css.js';
-
-/* const { inspect } = createBrowserInspector({
-  autoStart: false
-}); */
 
 export class FeedbackElement extends LitElement {
   static override styles = [styles];
