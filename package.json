@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "lit": "^3.3.3",
-    "xstate": "^6.0.0-beta.2"
+    "xstate": "^6.0.0-beta.3"
   },
   "devDependencies": {
     "@custom-elements-manifest/analyzer": "^0.11.0",

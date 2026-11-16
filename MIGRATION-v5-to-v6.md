@@ -3,7 +3,7 @@
 > This guide records the original migration from XState v5 (`^5.32.5`, commit `c9bb982`) to
 > v6 (`^6.0.0-alpha.59`). The v6 examples reflect the repository implementation at that time;
 > the v5 blocks are reconstructed reference versions. The package has since moved to
-> `xstate@^6.0.0-beta.2`; see [Current implementation notes](#7-current-implementation-notes).
+> `xstate@^6.0.0-beta.3`; see [Current implementation notes](#7-current-implementation-notes).
 
 ---
 
@@ -381,7 +381,7 @@ has since been removed from `package.json`.
 - Application code stopped using `@statelyai/inspect` (incompatible with xstate v6); the dependency has since been removed from the manifest.
 
 The dependency example above is the migration-time snapshot, not the current
-manifest. The current package uses `xstate@^6.0.0-beta.2` and no longer lists
+manifest. The current package uses `xstate@^6.0.0-beta.3` and no longer lists
 `@statelyai/inspect`.
 
 ---
@@ -389,7 +389,7 @@ manifest. The current package uses `xstate@^6.0.0-beta.2` and no longer lists
 ## 7. Current implementation notes
 
 These changes happened after the original alpha.59 migration examples (alpha.65 through
-beta.2). They describe the current repository implementation and should not be read as
+beta.3). They describe the current repository implementation and should not be read as
 differences that apply to every XState v6 release.
 
 ### Inspection events in alpha.65
@@ -439,6 +439,27 @@ in a database) and validate by shape are affected.
 Other changes in the release (`createFSM` fixes, inline-invoke `onDone.event.output`
 typed as `unknown` without registered actors, `durable.checkpoint()`, inspector
 `sent[]` memory fix) do not touch APIs used by this repository.
+
+### Changes in 6.0.0-beta.3
+
+The release notes
+(<https://github.com/statelyai/xstate/releases/tag/xstate%406.0.0-beta.3>)
+do not require code changes here:
+
+- Callback, event observable, listener and subscription actors process the
+  events they send to their parent in their own transitions. This changes what
+  inspection and those actors' subscribers see. `UseMachine` subscribes only to
+  the root machine actor, and the machines here have no such children.
+- `xstate/fsm` gains `always` transitions and now requires object targets
+  (`{ target: 'ready' }`). `xstate/fsm` is not used here, and the machines
+  already use object targets because v6 rejects the string shorthand.
+- Delayed events are handled before `always` transitions, as in v5. Neither
+  machine has `always` transitions, so the counter's `after: { backoff }`
+  is unaffected.
+- Targetless transitions with `reenter: true` no longer run entry actions.
+  Neither machine uses `reenter`. Their targetless transitions (`INC`, `DEC`,
+  `feedback.update`) only return `context`, which already ran no entry or exit
+  actions.
 
 ### Required actor input in `UseMachine`
 
