@@ -3,7 +3,7 @@
 > This guide records the original migration from XState v5 (`^5.32.5`, commit `c9bb982`) to
 > v6 (`^6.0.0-alpha.59`). The v6 examples reflect the repository implementation at that time;
 > the v5 blocks are reconstructed reference versions. The package has since moved to
-> `xstate@^6.0.0-beta.3`; see [Current implementation notes](#7-current-implementation-notes).
+> `xstate@^6.0.0-beta.4`; see [Current implementation notes](#7-current-implementation-notes).
 
 ---
 
@@ -381,7 +381,7 @@ has since been removed from `package.json`.
 - Application code stopped using `@statelyai/inspect` (incompatible with xstate v6); the dependency has since been removed from the manifest.
 
 The dependency example above is the migration-time snapshot, not the current
-manifest. The current package uses `xstate@^6.0.0-beta.3` and no longer lists
+manifest. The current package uses `xstate@^6.0.0-beta.4` and no longer lists
 `@statelyai/inspect`.
 
 ---
@@ -389,7 +389,7 @@ manifest. The current package uses `xstate@^6.0.0-beta.3` and no longer lists
 ## 7. Current implementation notes
 
 These changes happened after the original alpha.59 migration examples (alpha.65 through
-beta.3). They describe the current repository implementation and should not be read as
+beta.4). They describe the current repository implementation and should not be read as
 differences that apply to every XState v6 release.
 
 ### Inspection events in alpha.65
@@ -460,6 +460,37 @@ do not require code changes here:
   Neither machine uses `reenter`. Their targetless transitions (`INC`, `DEC`,
   `feedback.update`) only return `context`, which already ran no entry or exit
   actions.
+
+### Changes in 6.0.0-beta.4
+
+The release notes
+(<https://github.com/statelyai/xstate/releases/tag/xstate%406.0.0-beta.4>)
+contain only patch changes and require no code changes here:
+
+- `snapshot.can()` no longer throws when a transition calls `enq.spawn()` with
+  a registered actor name. `UseMachine`'s `can` proxy calls `snapshot.can()`,
+  so `controller.can.X()` now works for those transitions too
+  (`test/UseMachine.test.ts` covers it; it fails on beta.3).
+- Timers: each scheduling now has an `occurrence`, and an `xstate.timer`
+  notification only fires the pending timer with the same occurrence. Before,
+  a notification from a cancelled timer could fire a replacement with the same
+  id early, but only if the old timer fired while the actor was still
+  processing the events that cancelled and replaced it (the release's tests
+  advance a `SimulatedClock` from inside an action). With the native
+  `setTimeout` clock that cannot happen: a timer callback never runs in the
+  middle of synchronous event processing, and leaving a state clears its
+  timeouts. So the counter's `after: { backoff }`, restored or not, was not
+  affected, and there is no regression test for it here. Only custom timer
+  hosts (none here) must now keep the key's `occurrence`, and Effect snapshot
+  schemas must keep `nextTimerOccurrence`. `UseMachine` passes the persisted
+  snapshot through unchanged.
+- `self.on(...)` in machine callbacks is typed from `schemas.emitted`. The
+  machines here emit with `enq.emit` and `UseMachine` listens with
+  `actor.on('*', ...)`, which was already typed.
+- Not used here: eventless (`always`) transition functions are evaluated once
+  per microstep; invoke `input` sees the context patch returned by the state's
+  `entry`; ancestor context refinements are checked for descendant targets,
+  and unknown literal targets returned by choice functions are type errors.
 
 ### Required actor input in `UseMachine`
 

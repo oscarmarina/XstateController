@@ -155,6 +155,40 @@ describe('UseMachine', () => {
     expect(can.TOGGLE()).toBe(false);
   });
 
+  // Before xstate@6.0.0-beta.4, `snapshot.can()` threw for a transition that spawns a registered
+  // actor by name
+  it('`can` answers for transitions that spawn a registered actor', async () => {
+    const spawnMachine = setup({
+      schemas: { events: { START: types<void>() } },
+      actors: { worker: createMachine({}) },
+    }).createMachine({
+      initial: 'idle',
+      states: {
+        idle: {
+          on: {
+            START: (_, enq) => {
+              enq.spawn('worker');
+              return { target: 'running' };
+            },
+          },
+        },
+        running: {},
+      },
+    });
+    const host = { addController: vi.fn(), requestUpdate: vi.fn() } as never;
+    const controller = new UseMachine(host, { machine: spawnMachine });
+    controller.hostConnected();
+
+    expect(controller.can.START()).toBe(true);
+    // `can` does not run the transition
+    expect(Object.keys(controller.snapshot.children)).toEqual([]);
+
+    controller.trigger.START();
+    expect(controller.snapshot.value).toBe('running');
+    expect(Object.keys(controller.snapshot.children)).toHaveLength(1);
+    expect(controller.can.START()).toBe(false);
+  });
+
   it('ignores an event when `can` is false, and XState warns in development builds', async () => {
     const host = await mount(new TestHost());
     const { can, trigger } = host.controller;
