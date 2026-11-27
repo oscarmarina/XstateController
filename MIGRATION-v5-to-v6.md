@@ -3,7 +3,7 @@
 > This guide records the original migration from XState v5 (`^5.32.5`, commit `c9bb982`) to
 > v6 (`^6.0.0-alpha.59`). The v6 examples reflect the repository implementation at that time;
 > the v5 blocks are reconstructed reference versions. The package has since moved to
-> `xstate@^6.0.0-beta.4`; see [Current implementation notes](#7-current-implementation-notes).
+> `xstate@^6.0.0-beta.5`; see [Current implementation notes](#7-current-implementation-notes).
 
 ---
 
@@ -381,7 +381,7 @@ has since been removed from `package.json`.
 - Application code stopped using `@statelyai/inspect` (incompatible with xstate v6); the dependency has since been removed from the manifest.
 
 The dependency example above is the migration-time snapshot, not the current
-manifest. The current package uses `xstate@^6.0.0-beta.4` and no longer lists
+manifest. The current package uses `xstate@^6.0.0-beta.5` and no longer lists
 `@statelyai/inspect`.
 
 ---
@@ -389,7 +389,7 @@ manifest. The current package uses `xstate@^6.0.0-beta.4` and no longer lists
 ## 7. Current implementation notes
 
 These changes happened after the original alpha.59 migration examples (alpha.65 through
-beta.4). They describe the current repository implementation and should not be read as
+beta.5). They describe the current repository implementation and should not be read as
 differences that apply to every XState v6 release.
 
 ### Inspection events in alpha.65
@@ -491,6 +491,32 @@ contain only patch changes and require no code changes here:
   per microstep; invoke `input` sees the context patch returned by the state's
   `entry`; ancestor context refinements are checked for descendant targets,
   and unknown literal targets returned by choice functions are type errors.
+
+### Changes in 6.0.0-beta.5
+
+The release notes
+(<https://github.com/statelyai/xstate/releases/tag/xstate%406.0.0-beta.5>)
+require no code changes here. The two changes to transition semantics only
+apply to parallel states, and neither machine has one:
+
+- Breaking (v6 beta): a transition between parallel regions now exits and
+  reenters the common parallel state, as in SCXML: the other regions restart,
+  entry and exit run again, and invoked actors in exited states stop.
+- Event transitions are selected from each active leaf in parallel states,
+  in definition order, as `always` transitions already were.
+
+Other changes do not touch APIs used by this repository:
+
+- Machine configs accept `route: true`, and transition functions can raise
+  `{ type: 'xstate.route', to: '#id' }`.
+- Duration strings without a number (`'s'`, `'.s'`) are rejected instead of
+  read as 0 ms. The counter's delay is the `backoff` function, not a string.
+- `waitFor` rejects when its predicate throws and releases its timer and
+  subscriptions. Neither the controller nor the tests use `waitFor`.
+- The docs explain when a completing machine captures its `output`, and
+  pure-transition snapshot lineages release memory sooner. Neither machine
+  has final states with `output`, and `UseMachine` uses `createActor`, not
+  the pure `transition` API.
 
 ### Required actor input in `UseMachine`
 
